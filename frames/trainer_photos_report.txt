@@ -1,0 +1,44 @@
+OJAS trainer photos report
+RESULT: 60 of 60 pictures ready, 0 failed
+Time: 2026-10-11 02:58
+Folder: C:\Users\Happy\Desktop\Ojas\app\ojas-app\frames\real
+Downloaded now: 60
+Already there (skipped): 0
+Failed: 0
+Pictures in folder: 60  (3.2 MB)
+
+Exercise -> photo:
+  bench-press -> Dumbbell_Bench_Press
+  incline-press -> Incline_Dumbbell_Press
+  lat-pulldown -> Wide-Grip_Lat_Pulldown
+  seated-row -> Seated_Cable_Rows
+  lateral-raise -> Side_Lateral_Raise
+  bicep-curl -> Dumbbell_Bicep_Curl
+  tricep-pushdown -> Triceps_Pushdown
+  leg-press -> Leg_Press
+  rdl -> Romanian_Deadlift
+  calf-raise -> Standing_Calf_Raises
+  incline-walk -> Walking_Treadmill
+  farmer-carry -> Farmers_Walk
+  wall-pushup -> Pushups
+  incline-pushup -> Incline_Push-Up
+  knee-pushup -> Push-Ups_-_Close_Triceps_Position
+  dead-hang -> Pullups
+  inverted-row -> Inverted_Row
+  negative-pullup -> Pullups
+  pullup -> Pullups
+  single-bridge -> Single_Leg_Glute_Bridge
+  dead-bug -> Dead_Bug
+  side-plank -> Push_Up_to_Side_Plank
+  hollow-hold -> Dead_Bug
+  knee-raise -> Hanging_Leg_Raise
+  crunch -> Crunches
+  step-up -> Step-up_with_Knee_Raise
+  jumping-jacks -> Star_Jump
+  burpee -> Mountain_Climbers
+  brisk-walk -> Walking_Treadmill
+  skipping -> Rope_Jumping
+  cycling -> Bicycling_Stationary
+  balasana -> Childs_Pose
+  paschimottanasana -> Seated_Hamstring_and_Calf_Stretch
+  malasana -> Bodyweight_Squat

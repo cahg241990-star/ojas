@@ -1,0 +1,26 @@
+{
+  "batch": 1,
+  "made": "2026-10-11",
+  "note": "Canva media IDs of AI coach frames. Order = page order in the Canva export design. Files are saved as <exercise>_<n>.png",
+  "frames": [
+    {"page": 1,  "file": "squat_1.png",        "exercise": "bw-squat",        "coach": "Riya",   "canva": "MAHXpD8AT74"},
+    {"page": 2,  "file": "squat_2.png",        "exercise": "bw-squat",        "coach": "Riya",   "canva": "MAHXpFpyhoM"},
+    {"page": 3,  "file": "lunge_1.png",        "exercise": "split-squat",     "coach": "Riya",   "canva": "MAHXpPZukgE"},
+    {"page": 4,  "file": "lunge_2.png",        "exercise": "split-squat",     "coach": "Riya",   "canva": "MAHXpJyTOYQ"},
+    {"page": 5,  "file": "pushup_1.png",       "exercise": "pushup",          "coach": "Vikram", "canva": "MAHXpGbVRM0"},
+    {"page": 6,  "file": "pushup_2.png",       "exercise": "pushup",          "coach": "Vikram", "canva": "MAHXpGbOfwo"},
+    {"page": 7,  "file": "plank_1.png",        "exercise": "plank",           "coach": "Vikram", "canva": "MAHXpJ8NEnc"},
+    {"page": 8,  "file": "plank_2.png",        "exercise": "plank",           "coach": "Vikram", "canva": "MAHXpFGODUo"},
+    {"page": 9,  "file": "row_1.png",          "exercise": "db-row",          "coach": "Kabir",  "canva": "MAHXpPRshc4"},
+    {"page": 10, "file": "row_2.png",          "exercise": "db-row",          "coach": "Kabir",  "canva": "MAHXpDNVMrA"},
+    {"page": 11, "file": "press_1.png",        "exercise": "shoulder-press",  "coach": "Kabir",  "canva": "MAHXpNBQmVA"},
+    {"page": 12, "file": "press_2.png",        "exercise": "shoulder-press",  "coach": "Kabir",  "canva": "MAHXpH3LTZ0"},
+    {"page": 13, "file": "bridge_1.png",       "exercise": "glute-bridge",    "coach": "Anaya",  "canva": "MAHXpG0423g"},
+    {"page": 14, "file": "bridge_2.png",       "exercise": "glute-bridge",    "coach": "Anaya",  "canva": "MAHXpFCYumI"},
+    {"page": 15, "file": "catcow_1.png",       "exercise": "marjaryasana",    "coach": "Anaya",  "canva": "MAHXpAgh6zg"},
+    {"page": 16, "file": "catcow_2.png",       "exercise": "marjaryasana",    "coach": "Anaya",  "canva": "MAHXpC3qe8g"},
+    {"page": 17, "file": "surya_1.png",        "exercise": "surya-namaskar",  "coach": "Anaya",  "canva": "MAHXpCVHOoI"},
+    {"page": 18, "file": "surya_2.png",        "exercise": "surya-namaskar",  "coach": "Anaya",  "canva": "MAHXpHyHANU"},
+    {"page": 19, "file": "kegel_1.png",        "exercise": "kegel",           "coach": "Anaya",  "canva": "MAHXpPEWGKo"}
+  ]
+}
