@@ -11,7 +11,7 @@ const COACHES = {
 };
 const COACH_FOR_CAT = {Gym:'kabir', Calisthenics:'vikram', Cardio:'kabir', Yoga:'anaya', Breath:'anaya', Meditation:'anaya', Mobility:'anaya', Pelvic:'anaya'};
 
-/* AI coach frames (batch 1). coach overrides the category coach. cue = words spoken at the two halves of each rep. */
+/* AI coach frames (batch 1 + 2). say = words spoken on each frame of a multi-pose sequence (Surya Namaskar). coach overrides the category coach. cue = words spoken at the two halves of each rep. */
 const AI_FRAMES = {
   'bw-squat':       {coach:'riya',   f:['frames/squat_1.jpg','frames/squat_2.jpg']},
   'goblet-squat':   {coach:'riya',   f:['frames/squat_1.jpg','frames/squat_2.jpg']},
@@ -29,18 +29,35 @@ const AI_FRAMES = {
   'setu-bandhasana':{coach:'anaya',  f:['frames/bridge_1.jpg','frames/bridge_2.jpg']},
   'marjaryasana':   {coach:'anaya',  f:['frames/catcow_1.jpg','frames/catcow_2.jpg'], tempo:6000,
                      cue:{en:['Breathe in, look up','Breathe out, round your back'], hi:['सांस लीजिए, ऊपर देखिए','सांस छोड़िए, पीठ गोल कीजिए']}},
-  'surya-namaskar': {coach:'anaya',  f:['frames/surya_1.jpg','frames/surya_2.jpg'], tempo:9000},
+  'surya-namaskar': {coach:'anaya',  tempo:30000,
+                     f:['frames/surya_1.jpg','frames/armsup_1.jpg','frames/fold_1.jpg','frames/lowlunge_1.jpg','frames/yplank_1.jpg','frames/ashtanga_1.jpg',
+                        'frames/surya_2.jpg','frames/dog_1.jpg','frames/lowlunge_1.jpg','frames/fold_1.jpg','frames/armsup_1.jpg','frames/surya_1.jpg'],
+                     say:{en:['Prayer pose','Breathe in, arms up','Breathe out, fold forward','Breathe in, step back into lunge','Hold, plank','Knees, chest, chin down','Breathe in, cobra','Breathe out, downward dog','Breathe in, step forward into lunge','Breathe out, fold forward','Breathe in, rise up, arms up','Breathe out, prayer pose'],
+                          hi:['प्रणाम आसन','सांस लीजिए, हाथ ऊपर','सांस छोड़िए, आगे झुकिए','सांस लीजिए, पैर पीछे','रुकिए, प्लैंक','घुटने, छाती, ठोड़ी नीचे','सांस लीजिए, भुजंगासन','सांस छोड़िए, पर्वतासन','सांस लीजिए, पैर आगे','सांस छोड़िए, आगे झुकिए','सांस लीजिए, हाथ ऊपर','सांस छोड़िए, प्रणाम']}},
   'bhujangasana':   {coach:'anaya',  f:['frames/surya_2.jpg']},
+  'tadasana':       {coach:'anaya',  f:['frames/tadasana_1.jpg','frames/armsup_1.jpg'], tempo:8000, cue:{en:['Stand tall, breathe in','Stretch up, breathe out'], hi:['सीधे खड़े, सांस लीजिए','ऊपर खिंचिए, सांस छोड़िए']}},
+  'vrikshasana':    {coach:'anaya',  f:['frames/tree_1.jpg']},
+  'trikonasana':    {coach:'anaya',  f:['frames/triangle_1.jpg']},
+  'virabhadrasana': {coach:'anaya',  f:['frames/warrior_1.jpg']},
+  'naukasana':      {coach:'anaya',  f:['frames/boat_1.jpg']},
+  'balasana':       {coach:'anaya',  f:['frames/child_1.jpg']},
+  'paschimottanasana':{coach:'anaya',f:['frames/paschim_1.jpg']},
+  'malasana':       {coach:'anaya',  f:['frames/malasana_1.jpg']},
+  'body-scan':      {coach:'anaya',  f:['frames/shavasana_1.jpg']},
+  'yoga-nidra':     {coach:'anaya',  f:['frames/shavasana_1.jpg']},
+  'chin-tuck':      {coach:'anaya',  f:['frames/chin_1.jpg','frames/chin_2.jpg'], tempo:6000, cue:{en:['Pull your chin straight back, hold','Relax'], hi:['ठोड़ी सीधी पीछे, रोकिए','ढीला छोड़िए']}},
+  'wall-angel':     {coach:'anaya',  f:['frames/wallangel_1.jpg','frames/wallangel_2.jpg'], tempo:5000},
+  'boxing':         {coach:'vikram', f:['frames/boxing_1.jpg','frames/boxing_2.jpg']},
   'kegel':          {coach:'anaya',  f:['frames/kegel_1.jpg'], tempo:10000, cue:{en:['Squeeze and hold','Relax'], hi:['कसिए और रोकिए','ढीला छोड़िए']}},
   'reverse-kegel':  {coach:'anaya',  f:['frames/kegel_1.jpg'], tempo:8000, cue:{en:['Gently push out','Relax'], hi:['धीरे से बाहर की ओर','ढीला छोड़िए']}},
-  'anulom-vilom':   {coach:'anaya',  f:['frames/kegel_1.jpg']},
-  'bhramari':       {coach:'anaya',  f:['frames/kegel_1.jpg'], tempo:8000, cue:{en:['Breathe in','Hum mmm'], hi:['सांस लीजिए','म्म्म गुनगुनाइए']}},
+  'anulom-vilom':   {coach:'anaya',  f:['frames/anulom_1.jpg']},
+  'bhramari':       {coach:'anaya',  f:['frames/bhramari_1.jpg'], tempo:8000, cue:{en:['Breathe in','Hum mmm'], hi:['सांस लीजिए','म्म्म गुनगुनाइए']}},
   'kapalbhati':     {coach:'anaya',  f:['frames/kegel_1.jpg'], tempo:1000},
   'ujjayi':         {coach:'anaya',  f:['frames/kegel_1.jpg']},
   'box-breathing':  {coach:'anaya',  f:['frames/kegel_1.jpg']},
   'mouth-throat':   {coach:'anaya',  f:['frames/kegel_1.jpg']},
   'breath-watch':   {coach:'anaya',  f:['frames/kegel_1.jpg']},
-  'trataka':        {coach:'anaya',  f:['frames/kegel_1.jpg']}
+  'trataka':        {coach:'anaya',  f:['frames/trataka_1.jpg']}
 };
 
 /* Real-trainer photo IDs in the free exercise library (github.com/yuhonas/free-exercise-db, public domain). */
@@ -52,8 +69,7 @@ const FX = {
   'wall-pushup':'Pushups','incline-pushup':'Incline_Push-Up','knee-pushup':'Push-Ups_-_Close_Triceps_Position','dead-hang':'Pullups',
   'inverted-row':'Inverted_Row','negative-pullup':'Pullups','pullup':'Pullups','single-bridge':'Single_Leg_Glute_Bridge','dead-bug':'Dead_Bug',
   'side-plank':'Push_Up_to_Side_Plank','hollow-hold':'Dead_Bug','knee-raise':'Hanging_Leg_Raise','crunch':'Crunches','step-up':'Step-up_with_Knee_Raise',
-  'jumping-jacks':'Star_Jump','burpee':'Mountain_Climbers','brisk-walk':'Walking_Treadmill','skipping':'Rope_Jumping','cycling':'Bicycling_Stationary',
-  'balasana':'Childs_Pose','paschimottanasana':'Seated_Hamstring_and_Calf_Stretch','malasana':'Bodyweight_Squat'
+  'jumping-jacks':'Star_Jump','burpee':'Mountain_Climbers','brisk-walk':'Walking_Treadmill','skipping':'Rope_Jumping','cycling':'Bicycling_Stationary'
 };
 
 /* Walking journey — approximate road distances, cumulative from Gurgaon. */

@@ -1,7 +1,7 @@
 /* OJAS app logic. All personal data stays in this phone's browser storage (localStorage key "ojas.v1"). */
 (() => {
 'use strict';
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const KEY = 'ojas.v1';
 
 /* ---------------- storage ---------------- */
@@ -660,7 +660,7 @@ const HAS_MEDIA = typeof AI_FRAMES!=='undefined';
 function exMedia(e){
   if(!HAS_MEDIA || !e) return {kind:'fig', coach:'anaya'};
   const af=AI_FRAMES[e.id]; const coach=(af&&af.coach)||COACH_FOR_CAT[e.cat]||'anaya';
-  if(af) return {kind:'ai', f:af.f, coach, tempo:af.tempo, cue:af.cue};
+  if(af) return {kind:'ai', f:af.f, coach, tempo:af.tempo, cue:af.cue, say:af.say};
   const fx=FX[e.id];
   if(fx) return {kind:'real', f:[0,1].map(i=>`frames/real/${fx}_${i}.jpg`), alt:[0,1].map(i=>`${FX_BASE}${fx}/${i}.jpg`), coach};
   return {kind:'fig', coach};
@@ -672,8 +672,9 @@ function coachOf(e){ return HAS_MEDIA ? COACHES[exMedia(e).coach] : null; }
 function exStage(e){
   const m=exMedia(e); const c=coachOf(e);
   if(m.kind==='fig') return `<div class="fig-stage">${figSVG(e.anim)}</div>`;
-  const two=m.f.length>1;
-  return `<div class="photo-stage media ${two?'two':'one'}" data-anim="${esc(e.anim)}">${mImg(m,0,'f0')}${two?mImg(m,1,'f1'):''}
+  const n=m.f.length, two=n===2;
+  const imgs = n>2 ? m.f.map((_,i)=>mImg(m,i,'sq'+(i?'':' on'))).join('') : mImg(m,0,'f0')+(two?mImg(m,1,'f1'):'');
+  return `<div class="photo-stage media ${n>2?'seq':two?'two':'one'}" data-anim="${esc(e.anim)}">${imgs}
     ${c&&m.kind==='ai'?`<div class="coach-chip"><img src="${esc(c.img)}" alt="">${esc(c.name)}</div>`:''}
     <span class="ph-tag">${m.kind==='ai'?'Ojas coach':'Trainer photo'}</span></div>`;
 }
@@ -686,6 +687,9 @@ document.addEventListener('error',ev=>{
     if(!box.classList.contains('fig-thumb') && !box.classList.contains('pl-stage')) box.classList.add('fig-stage');
     box.innerHTML=figSVG(box.dataset.anim||'stand'); mountFigs(box); }
 }, true);
+
+setInterval(()=>{ document.querySelectorAll('.photo-stage.seq').forEach(st=>{ const ims=[...st.querySelectorAll('img.sq')]; if(!ims.length) return;
+  const i=ims.findIndex(x=>x.classList.contains('on')); ims[i<0?0:i].classList.remove('on'); ims[(i+1)%ims.length].classList.add('on'); }); }, 1700);
 
 /* ---------- voice ---------- */
 let VOICES=[]; const loadVoices=()=>{ try{ VOICES=speechSynthesis.getVoices()||[]; }catch(e){} };
@@ -747,7 +751,7 @@ function drawSetup(){
 function plMount(){
   const e=P.e, m=P.m, c=coachOf(e);
   const stage = m.kind==='fig' ? `<div class="pl-stage fig">${figSVG(e.anim)}</div>`
-    : `<div class="pl-stage media" data-anim="${esc(e.anim)}">${mImg(m,0,'f0')}${m.f.length>1?mImg(m,1,'f1'):''}</div>`;
+    : `<div class="pl-stage media" data-anim="${esc(e.anim)}">${m.f.map((_,i)=>mImg(m,i,'fr'+(i?'':' f0'))).join('')}</div>`;
   const el=document.createElement('div'); el.className='player'; el.id='player';
   el.innerHTML=`<div class="pl-top">${stage}<div class="pl-shade"></div>
       <button class="pl-x" data-act="plStop" aria-label="End">✕</button>
@@ -760,7 +764,7 @@ function plMount(){
   document.body.appendChild(el); mountFigs(el); requestAnimationFrame(()=>el.classList.add('show'));
 }
 const plEl = id => document.getElementById(id);
-function plFrame(i){ const f1=$('#player .f1'); if(f1) f1.style.opacity = i ? 1 : 0; }
+function plFrame(i){ const ims=$$('#player .pl-stage img.fr'); if(ims.length<2) return; const k=((i%ims.length)+ims.length)%ims.length; ims.forEach((im,j)=>im.style.opacity = j===k ? 1 : 0); }
 function plShow(big, unit, cue){ if(big!=null){ const c=plEl('plCount'); if(c){ c.textContent=big; c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); } }
   if(unit!=null && plEl('plUnit')) plEl('plUnit').textContent=unit; if(cue!=null && plEl('plCue')) plEl('plCue').textContent=cue; }
 function plBar(p){ const b=plEl('plBar'); if(b) b.style.width=Math.max(0,Math.min(100,p*100))+'%'; }
@@ -789,15 +793,18 @@ function plWork(){
   plSetLabel(`Set ${P.set} of ${P.sets}`);
   const cue=P.m.cue && P.m.cue[P.lang];
   if(!timed){
-    const half=(P.m.tempo||TEMPO[e.cat]||2400)/2;
-    plShow(0, `of ${P.reps}`, cue?cue[0]:'');
-    speak(cue?cue[0]:L.go,{flush:true});
-    const tick=()=>{ P.h++; plFrame(P.h%2);
-      if(P.h%2===0){ P.rep++; plShow(P.rep,`of ${P.reps}`, cue?cue[0]:''); plBar(P.rep/P.reps);
-        speak(String(P.rep),{flush:!cue, rate:1.1});
+    const n=(P.m.f||[]).length, steps=Math.max(2,n), say=P.m.say && P.m.say[P.lang];
+    const half=(P.m.tempo||TEMPO[e.cat]||2400)/steps;
+    const first = say ? say[0] : cue ? cue[0] : '';
+    plShow(0, `of ${P.reps}`, first);
+    speak(first || L.go,{flush:true});
+    const tick=()=>{ P.h++; plFrame(P.h);
+      if(P.h%steps===0){ P.rep++; plShow(P.rep,`of ${P.reps}`, first); plBar(P.rep/P.reps);
+        speak(String(P.rep),{flush:!(cue||say), rate:1.1});
         if(P.rep>=P.reps){ plAfter(800, plEndSet); return; }
-        if(cue) speak(cue[0]);
-      } else if(cue){ plShow(null,null,cue[1]); speak(cue[1],{flush:true}); }
+        if(first) speak(first);
+      } else if(say){ const w=say[P.h%steps]; plShow(null,null,w); speak(w,{flush:true}); plBar((P.rep+(P.h%steps)/steps)/P.reps); }
+      else if(cue){ plShow(null,null,cue[1]); speak(cue[1],{flush:true}); }
       plAfter(half, tick); };
     plAfter(half, tick);
   } else {
@@ -807,7 +814,7 @@ function plWork(){
     plShow(countMode?0:mmss(P.left), countMode?`${P.secs} s`:'seconds left', cue?cue[0]:'Keep breathing');
     speak(L.go,{flush:true});
     const tick=()=>{ P.left--; el++; P.worked++; plBar(el/P.secs);
-      if(el%flip===0) plFrame((el/flip)%2);
+      if(el%flip===0) plFrame(el/flip);
       if(countMode){ plShow(el); speak(String(el),{flush:true, rate:1.2}); }
       else { plShow(mmss(P.left));
         if(cue && P.m.tempo && el%Math.max(1,Math.round(P.m.tempo/2000))===0){ const c=cue[(el/Math.round(P.m.tempo/2000))%2]; plShow(null,null,c); speak(c,{flush:true}); }
