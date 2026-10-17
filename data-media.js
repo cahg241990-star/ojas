@@ -111,3 +111,20 @@ const BADGES = [
   {id:'kg-10',       e:'🚀', name:'10 kg down',             test:s=>s.kgLost>=10},
   {id:'kg-21',       e:'👑', name:'Goal weight reached',    test:s=>s.kgLost>=21}
 ].concat(JOURNEY.slice(1).map((j,i)=>({id:'stop-'+(i+1), e:j.e, name:'Walked to '+j.name.split(',')[0], test:s=>s.totalKm>=j.km, journey:true})));
+
+/* Natural voice pack (pre-recorded by voices/make_voices.py). The app plays voices/<file>.mp3 when the exact sentence
+   exists in voices/voices.json, otherwise it falls back to the phone's built-in voice. Keep sentences here in one place. */
+const VOICE = {
+  ids:    {en:{f:'en-IN-NeerjaNeural', m:'en-IN-PrabhatNeural'}, hi:{f:'hi-IN-SwaraNeural', m:'hi-IN-MadhurNeural'}},
+  gender: {riya:'f', anaya:'f', kabir:'f', vikram:'f'},   // one warm, soft female coach voice for everything
+  phrase: {
+    en:{ready:'Get ready.', go:'Go!', rest:'Rest. Shake out, sip water, breathe.', next:'Next set coming.', half:'Halfway.', left10:'10 seconds left.',
+        done:'Great work! Well done.', hello:'Hello! I am your Ojas coach.', test:'One, two, three. Great work!', keep:'Keep going, you are doing great.', nextEx:'Next exercise.', wdone:'Workout complete. Amazing work today!'},
+    hi:{ready:'तैयार हो जाइए।', go:'शुरू!', rest:'आराम कीजिए। हाथ-पैर ढीले, थोड़ा पानी, लंबी सांस।', next:'अगला सेट आ रहा है।', half:'आधा हो गया।', left10:'दस सेकंड बाकी।',
+        done:'शाबाश! बहुत बढ़िया।', hello:'नमस्ते! मैं आपका ओजस कोच हूँ।', test:'एक, दो, तीन। शाबाश!', keep:'बहुत बढ़िया, ऐसे ही चलते रहिए।', nextEx:'अगली एक्सरसाइज़।', wdone:'वर्कआउट पूरा हुआ। आज बहुत बढ़िया किया!'}
+  },
+  setGo:  {en:n=>`Set ${n}. Go!`, hi:n=>`सेट ${n}। शुरू!`},
+  minLeft:{en:m=>`${m} ${m>1?'minutes':'minute'} left.`, hi:m=>`${m} मिनट बाकी।`},
+  intro(e, lang){ return lang==='hi' ? `${e.hi||e.en}। तैयार हो जाइए।` : `${e.en}. ${(e.steps||[]).slice(0,3).join(' ')} Get ready.`; },
+  maxCount: 60
+};

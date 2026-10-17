@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ojas Report</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{color-scheme:light;--bg:#f6f5f2;--surface:#fcfcfb;--border:#e4e2dc;--t1:#0b0b0b;--t2:#52514e;--t3:#8a8984;--s1:#2a78d6;--s1soft:#cde2fb;--good:#1a8f4f;--warn:#b77900;--crit:#c8382f;--accent:#ff6a3d}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;--bg:#121211;--surface:#1a1a19;--border:#2e2e2b;--t1:#f0efec;--t2:#c3c2b7;--t3:#8f8e86;--s1:#3987e5;--s1soft:#1c3554;--good:#3fbf74;--warn:#e0a020;--crit:#e66767}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121211;--surface:#1a1a19;--border:#2e2e2b;--t1:#f0efec;--t2:#c3c2b7;--t3:#8f8e86;--s1:#3987e5;--s1soft:#1c3554;--good:#3fbf74;--warn:#e0a020;--crit:#e66767}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t1);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0}h2{font-size:16px;margin:0 0 10px}.muted{color:var(--t2)}.small{font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;min-width:0}
+.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.tile b{display:block;font-size:26px;font-variant-numeric:tabular-nums}.tile span{font-size:13px;color:var(--t2)}
+.btn{border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}.btn.sec{background:transparent;color:var(--t1);border:1px solid var(--border)}
+.inp{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--t1);font:inherit;margin:6px 0 10px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}th,td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--t2);font-weight:600}
+.tw{overflow-x:auto}
+svg{display:block;width:100%;height:auto}.ax{fill:var(--t3);font-size:10px}.grid-l{stroke:var(--border);stroke-width:1}.tgt{stroke:var(--t2);stroke-width:1.5;stroke-dasharray:4 4}
+.bar{fill:var(--s1)}.bar.hi{fill:var(--s1)}.ln{fill:none;stroke:var(--s1);stroke-width:2}.dot{fill:var(--s1soft);stroke:var(--s1);stroke-width:1}
+#tip{position:fixed;pointer-events:none;background:var(--surface);color:var(--t1);border:1px solid var(--border);border-radius:8px;padding:6px 9px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);display:none;z-index:9}
+#tip b{font-size:14px}.lv{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--border);font-size:12px}
+.strip i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-left:2px;background:var(--border)}.strip i.good{background:var(--good)}.strip i.mixed{background:var(--warn)}.strip i.weak{background:var(--crit)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+.st-g{color:var(--good)}.st-w{color:var(--warn)}.st-c{color:var(--crit)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card">Loading…</div></div>
+<div id="tip"></div>
+<script src="data-food.js"></script>
+<script src="data-plan.js"></script>
+<script src="cloud.js"></script>
+<script src="report.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{
+ "pushup": {
+  "file": "videos/clips/pushup.mp4",
+  "poster": "videos/thumbs/pushup.jpg",
+  "vid": 13134,
+  "src": "Pixabay",
+  "by": "tacofleur",
+  "page": "https://pixabay.com/videos/id-13134/",
+  "alts": [
+   39475,
+   38959,
+   70283,
+   302323,
+   302251
+  ]
+ },
+ "bhramari": {
+  "file": "videos/clips/bhramari.mp4",
+  "poster": "videos/thumbs/bhramari.jpg",
+  "vid": 184538,
+  "src": "Pixabay",
+  "by": "Amorn_mimi",
+  "page": "https://pixabay.com/videos/id-184538/",
+  "alts": [
+   190021,
+   80853,
+   207357,
+   332543,
+   290916
+  ]
+ },
+ "ujjayi": {
+  "file": "videos/clips/ujjayi.mp4",
+  "poster": "videos/thumbs/ujjayi.jpg",
+  "vid": 190021,
+  "src": "Pixabay",
+  "by": "Engin_Akyurt",
+  "page": "https://pixabay.com/videos/id-190021/",
+  "alts": [
+   293078,
+   445,
+   168352,
+   143436,
+   33902
+  ]
+ },
+ "trataka": {
+  "file": "videos/clips/trataka.mp4",
+  "poster": "videos/thumbs/trataka.jpg",
+  "vid": 93480,
+  "src": "Pixabay",
+  "by": "jrydertr",
+  "page": "https://pixabay.com/videos/id-93480/",
+  "alts": [
+   123827,
+   130878,
+   71431,
+   43424,
+   124105
+  ]
+ }
+}
