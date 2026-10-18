@@ -1,7 +1,7 @@
 /* OJAS app logic. All personal data stays in this phone's browser storage (localStorage key "ojas.v1"). */
 (() => {
 'use strict';
-const VERSION = '2.0.0';
+const VERSION = '2.0.1';
 const KEY = 'ojas.v1';
 
 /* ---------------- storage ---------------- */
@@ -2766,7 +2766,7 @@ function logOneSheet(id){ const e=exById(id); if(!e) return; const it=findPlanIt
   AX={wd:'lib', title:e.en, items:[{id, it, t, sets:[...Array(t.sets)].map(()=>({v:t.timed?t.secs:t.reps, kg:t.kg||'', ok:false})), skip:false}]};
   drawActuals(false); }
 (function(){ const st=document.createElement('style'); st.textContent=`
-.ax-ex.skip{opacity:.45}.ax-row{display:flex;align-items:center;gap:6px;margin-top:6px}.ax-in{width:64px;padding:6px 8px;text-align:center;margin:0}.ax-kg{width:58px;padding:6px 8px;text-align:center;margin:0}
+.ax-ex.skip{opacity:.45}.ax-row{display:flex;align-items:center;gap:5px;margin-top:6px}.ax-row>span{white-space:nowrap}.ax-in{width:58px;height:36px;padding:4px 6px;text-align:center;margin:0}.ax-kg{width:52px;height:36px;padding:4px 6px;text-align:center;margin:0}
 .ax-ok.on{background:var(--accent,#12b886);color:#fff}.up{color:#2f9e44;font-weight:700}.wk-tg{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px}`; document.head.appendChild(st); })();
 Object.assign(A, {
   axLog:el=>actualsSheet(+el.dataset.wd, false),
@@ -2793,6 +2793,12 @@ function chatSets(low){ let m, e, log=null;
   d.ex.push(entry); if(e.cat==='Breath') d.ticks.breath=true; const msg=progAfter(e.id, entry, it);
   return `💪 ${e.en}: ${entryText(entry,e)} (target ${tgtText(t,e)})${msg?' — '+msg:''}`; }
 
+/* ---------- safety copy on every version change (kept in the phone's bigger store, last 3 versions) ---------- */
+(function(){ try{ const prev=S.lastVersion; if(prev===VERSION) return; const snap=JSON.stringify(S);
+  if(prev && Object.keys(S.days).length){ const r=indexedDB.open('ojas-safety',1); r.onupgradeneeded=()=>r.result.createObjectStore('s',{keyPath:'v'});
+    r.onsuccess=()=>{ try{ const db=r.result, st=db.transaction('s','readwrite').objectStore('s'); st.put({v:prev, at:new Date().toISOString(), data:snap});
+      const all=st.getAllKeys(); all.onsuccess=()=>{ const ks=all.result.sort(); ks.slice(0,-3).forEach(k=>st.delete(k)); }; }catch(e){} }; }
+  S.lastVersion=VERSION; save(true); }catch(e){} })();
 /* ---------------- start ---------------- */
 applyTheme(); render(); checkBadges(); loadPhotos(); levelUps(); maybeMorning(); setTimeout(()=>syncNow(),1200);
 if(!S.settings.onboarded) setTimeout(()=>wizard(0),400);
