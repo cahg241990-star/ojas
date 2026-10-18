@@ -1,11 +1,11 @@
 /* OJAS app logic. All personal data stays in this phone's browser storage (localStorage key "ojas.v1"). */
 (() => {
 'use strict';
-const VERSION = '2.0.1';
+const VERSION = '2.1.0';
 const KEY = 'ojas.v1';
 
 /* ---------------- storage ---------------- */
-const DEFAULT_SETTINGS = {kcal:2000, protein:90, carbs:235, fat:60, water:12, waterMl:3000, steps:8000, heightCm:170, kg:'', theme:'auto', voice:'en', rest:45, avatar:'flame', onboarded:false};
+const DEFAULT_SETTINGS = {kcal:2000, protein:90, carbs:235, fat:60, water:12, waterMl:3000, steps:8000, heightCm:170, kg:'', theme:'light', voice:'en', rest:45, avatar:'flame', onboarded:false};
 function freshState(){ return {v:1, settings:{...DEFAULT_SETTINGS}, days:{}, customDishes:[], customIngs:[], customEx:[], links:{}, favs:[], bottles:[], photo:'', meas:[], labs:{}, retest:null, mealPick:{}, ui:{}, rungs:{push:1,pull:1,squat:1,hip:1,core:1}}; }
 function load(){
   try{ const raw = localStorage.getItem(KEY); if(!raw) return freshState();
@@ -14,6 +14,7 @@ function load(){
   }catch(e){ return freshState(); }
 }
 let S = load();
+if(!S.ui) S.ui={}; if(!S.ui.bright21){ S.ui.bright21=true; if(S.settings.theme==='auto') S.settings.theme='light'; }
 let storageOK = true; let SAVE_N = 0;
 function save(quiet){ SAVE_N++; try{ localStorage.setItem(KEY, JSON.stringify(S)); storageOK = true; }catch(e){ storageOK = false; toast('⚠️ Could not save — storage blocked'); } if(!quiet && typeof queueBadges==='function') queueBadges(); }
 
@@ -238,8 +239,7 @@ function vToday(){
     <div class="txt"><div class="t1">${esc(e.name)}</div><div class="t2">${esc(e.t)} · ${e.mins? r0(e.mins)+' min' : `${e.sets} × ${e.reps}`}</div></div>
     <div class="meta"><b>${r0(e.kcal)}</b>kcal</div><button class="x" data-act="delEx" data-id="${e.id}" aria-label="Delete">×</button></div>`).join('');
   const walk = stepStats(d.steps);
-  return `
-  <section class="hero">
+  const HERO=`  <section class="hero">
     <button class="hero-av" data-act="tab" data-tab="me" aria-label="Avatar">${avatarHTML()}</button>
     <div class="greet">${greet}</div>
     <div class="big">${headline}</div>
@@ -249,6 +249,10 @@ function vToday(){
     <div class="small" style="position:relative;margin-top:10px;opacity:.92">Eaten ${r0(t.k)} kcal · Burned ~${r0(t.burn+walk.kcal)} (workouts ${r0(t.burn)} + walking ${r0(walk.kcal)}) · Net ${r0(t.k-t.burn-walk.kcal)}</div>
     <div class="small" style="position:relative;margin-top:4px;opacity:.92">${bankLine()}</div>
   </section>
+`;
+  if(S.settings.simple!==false && !(S.ui&&S.ui.todayAll)) return HERO+simpleToday(d);
+  return HERO+`
+  <button class="btn ghost full" data-act="todaySimple">▲ Back to simple view</button>
   ${setupPrompt()}
   ${reviewCard()}
   ${eventCard()}
@@ -1534,11 +1538,8 @@ document.addEventListener('change',ev=>{
   if(t.id==='avatarFile' && t.files[0]) readAvatar(t.files[0]);
   if(t.dataset.photo && t.files[0]){ const pose=t.dataset.photo; resizeImg(t.files[0]).then(data=>PDB.put({id:todayKey()+'-'+pose, date:todayKey(), pose, data})).then(()=>{ loadPhotos(); toast('📸 Photo saved (private, on this phone)'); }).catch(()=>toast('Could not save the photo')); }
   if(t.id==='healthFile' && t.files[0]){ const rd=new FileReader(); rd.onload=()=>{ try{ const h=JSON.parse(rd.result); if(!h || !h.ojas_health) throw 0;
-      if(h.replace) S.labs={}; S.labs ||= {}; let n=0; for(const [k,arr] of Object.entries(h.labs||{})){ const a=(S.labs[k] ||= []); for(const [dt,v] of arr){ if(!a.some(x=>x[0]===dt)){ a.push([dt,v]); n++; } } }
-      if(h.retest) S.retest={...h.retest, done:(S.retest&&S.retest.done)||{}};
-      if(h.baseline && !(S.meas||[]).length){ S.meas=[{date:h.baseline.date, weight:h.baseline.weight, waist:h.baseline.waist}]; }
-      const sm=applySetupFile(h); if(sheetEl) closeSheet();
-      save(); tab=sm.length?'today':'health'; render(); toast(sm.length?`✅ Loaded ${sm.join(' + ')}${n?` · ${n} results`:''}`:`🩸 Loaded ${n} results`); }catch(e){ toast('That is not an Ojas health file'); } }; rd.readAsText(t.files[0]); }
+      const r=importHealth(h); if(sheetEl) closeSheet();
+      save(); tab=r.sm.length?'today':'health'; render(); toast(r.msg); }catch(e){ toast('That is not an Ojas health file'); } }; rd.readAsText(t.files[0]); }
   if(t.dataset.sl){ const d=day(); d.sl ||= {}; d.sl[t.dataset.sl]=t.value; const h=sleepHours(d.sl); if(h!=null) d.sleep=String(h); save(); render(); }
   if(t.dataset.in==='weight' || t.dataset.in==='waist') { if(tab==='today') toast('Saved ✓'); }
   if(t.dataset.in==='steps' && tab==='today') render();
@@ -1866,6 +1867,13 @@ document.addEventListener('input',ev=>{ const t=ev.target;
 document.addEventListener('change',ev=>{ const t=ev.target;
   if(t.id==='repFile' && t.files[0]){ readReport(t.files[0], t.dataset.to||'health'); t.value=''; }
 });
+function importHealth(h){
+  if(h.replace) S.labs={}; S.labs ||= {}; let n=0; for(const [k,arr] of Object.entries(h.labs||{})){ const a=(S.labs[k] ||= []); for(const [dt,v] of arr){ if(!a.some(x=>x[0]===dt)){ a.push([dt,v]); n++; } } }
+  if(h.retest) S.retest={...h.retest, done:(S.retest&&S.retest.done)||{}};
+  if(h.baseline && !(S.meas||[]).length){ S.meas=[{date:h.baseline.date, weight:h.baseline.weight, waist:h.baseline.waist}]; }
+  if(h.meds) S.meds=h.meds; if(h.visits) S.visits=h.visits; if(h.notes) S.notes=h.notes;
+  const sm=applySetupFile(h); S.settings.onboarded=true;
+  return {sm, n, msg: sm.length?`✅ Loaded ${sm.join(' + ')}${n?` · ${n} results`:''}`:`🩸 Loaded ${n} results`}; }
 function applySetupFile(h){ let msg=[];
   if(h.profile){ S.profile={...h.profile, date:h.profile.date||todayKey()}; msg.push('profile'); }
   if(h.goal){ S.goal={startWeight:(h.profile&&h.profile.weight)||'', startDate:todayKey(), startWaist:(h.profile&&h.profile.waist)||'', ...h.goal}; msg.push('goal'); }
@@ -2565,7 +2573,9 @@ async function syncPull(){ let changed=0;
     const localUnchanged = SY.sh && SY.sh===stateHash(); const firstHere = !SY.sh;
     const localEmpty = !S.profile && Object.keys(S.days).length===0;
     if(localUnchanged || (firstHere && localEmpty) || (firstHere && !S.profile && rem.profile)){
-      const keepDays=S.days; const f=freshState(); S={...f, ...rem, days:keepDays, settings:{...f.settings, ...(rem.settings||{})}, rungs:{...f.rungs, ...(rem.rungs||{})}}; ING=ingMap(); changed++; SY.sh=stateHash(); }
+      const keepDays=S.days; const f=freshState(); const imp=rem._import; S={...f, ...rem, days:keepDays, settings:{...f.settings, ...(rem.settings||{})}, rungs:{...f.rungs, ...(rem.rungs||{})}}; delete S._import; ING=ingMap(); changed++;
+      if(imp){ const r=importHealth(imp); S.settings.onboarded=true; SY.sh=null; setTimeout(()=>toast('🎉 Your profile, goals, plan and blood results are loaded'),600); } else SY.sh=stateHash(); }
+    else if(rem._import && !S.profile){ const r=importHealth(rem._import); SY.sh=null; changed++; setTimeout(()=>toast('🎉 Your profile, goals, plan and blood results are loaded'),600); }
     SY.stAt=st[0].updated_at; }
   // 2) days changed online since the last pull
   const since=SY.pullAt ? `&updated_at=gt.${encodeURIComponent(SY.pullAt)}` : '';
@@ -2615,21 +2625,26 @@ function cloudCard(){ if(!HAS_CLOUD) return '';
     <label class="row small" style="margin-top:8px;gap:8px"><input type="checkbox" data-act="cloudPhotos" ${SY.noPhotos?'':'checked'}> Also back up body & skin photos (private folder)</label>
     <div class="small muted" style="margin-top:6px">Your private space is copied only as scrambled text (locked with your passcode) — nobody, including the server, can read it.</div>
     <button class="btn ghost full" data-act="cloudOut" style="margin-top:4px">Log out of online backup</button></div>`; }
-function cloudLoginSheet(step, email, msg, ok){ step ||= 'in';
-  const isNew = step==='new';
-  openSheet(`<h2>☁️ Save my data online</h2><div class="hih">${isNew?'First time — create your account':'Log in'}</div>
-    <div class="seg" style="margin-bottom:10px"><button class="${!isNew?'on':''}" data-act="cloudMode" data-m="in">I have an account</button><button class="${isNew?'on':''}" data-act="cloudMode" data-m="new">First time</button></div>
+function cloudLoginSheet(step, email, msg, ok){
+  openSheet(`<div class="login-hero">☁️</div><h2 style="text-align:center">Log in to Ojas</h2><div class="hih" style="text-align:center">Your data is saved online — safe even if the phone is lost</div>
     <label class="f">Email</label><input class="inp" id="cEmail" type="email" inputmode="email" autocomplete="username" value="${esc(email||'')}" placeholder="you@gmail.com">
-    <label class="f">Password ${isNew?'(8+ characters — let iPhone save it)':''}</label><input class="inp" id="cPw" type="password" autocomplete="${isNew?'new-password':'current-password'}" placeholder="••••••••">
-    ${isNew?'<input class="inp" id="cPw2" type="password" autocomplete="new-password" placeholder="Same password again" style="margin-top:8px">':''}
-    <button class="btn pri full" style="margin-top:10px" data-act="${isNew?'cloudSignUp':'cloudSignIn'}">${isNew?'Create account':'Log in'}</button>
-    ${ok?`<div class="tip" style="margin-top:10px">${ok}</div>`:''}
-    ${msg?`<div class="small" style="color:var(--crit);margin-top:8px">${esc(msg)}</div>`:''}
-    <div class="small muted" style="margin-top:10px">Your password goes only to your own Supabase database, never to this app's files or to anyone else.</div>`, b=>{ const i=$(email?'#cPw':'#cEmail',b); setTimeout(()=>i&&i.focus(),200); }); }
+    <label class="f">Password</label><input class="inp" id="cPw" type="password" autocomplete="current-password" placeholder="8 or more characters">
+    <button class="btn pri full" style="margin-top:12px" data-act="cloudGo">Continue</button>
+    ${ok?`<div class="tip" style="margin-top:12px">${ok}</div>`:''}
+    ${msg?`<div class="small" style="color:var(--crit);margin-top:10px">${esc(msg)}</div>`:''}
+    <div class="small muted" style="margin-top:12px;text-align:center">First time? Just type your email and choose a password — the same button creates your account.</div>
+    ${!S.settings.onboarded?'<button class="btn ghost full" style="margin-top:6px" data-act="noCloud">Use without an account →</button>':''}`, b=>{ const i=$(email?'#cPw':'#cEmail',b); setTimeout(()=>i&&i.focus(),250); }); }
 async function cloudAfterLogin(){ closeSheet(); toast('Logged in ✓ Copying your data…'); await syncNow({count:true}); toast(SYNC.err?'⚠️ '+SYNC.err:'☁️ All copied online'); render(); }
 Object.assign(A, {
   cloudLogin:()=>cloudLoginSheet('in', Cloud.user&&Cloud.user.email),
-  cloudMode:el=>cloudLoginSheet(el.dataset.m, ($('#cEmail')||{}).value),
+  cloudGo:async()=>{ const e=$('#cEmail').value.trim().toLowerCase(), p=$('#cPw').value;
+    if(!/^\S+@\S+\.\S+$/.test(e)) return cloudLoginSheet('in', e, 'Please type your full email.'); if(p.length<8) return cloudLoginSheet('in', e, 'Password needs at least 8 characters.');
+    try{ await Cloud.signIn(e,p); return cloudAfterLogin(); }
+    catch(er){ if(/confirm/i.test(er.message)) return cloudLoginSheet('in', e, '', '📧 One last step: open the email from Supabase and tap <b>Confirm email address</b>. Then come back and tap Continue.');
+      if(!/invalid/i.test(er.message)) return cloudLoginSheet('in', e, 'Could not reach the server — check internet and try again.'); }
+    try{ const r=await Cloud.signUp(e,p); if(r==='in') return cloudAfterLogin();
+      cloudLoginSheet('in', e, '', '📧 Account created. One-time step (protects your health data): open the email from Supabase, tap <b>Confirm email address</b>, then come back here and tap <b>Continue</b>.'); }
+    catch(er){ cloudLoginSheet('in', e, /registered|exists/i.test(er.message)?'Wrong password for this email.':er.status===429?'Too many tries — wait a minute.':'Could not create the account: '+er.message); } },
   cloudSignUp:async()=>{ const e=$('#cEmail').value.trim().toLowerCase(), p=$('#cPw').value, p2=$('#cPw2').value;
     if(!/^\S+@\S+\.\S+$/.test(e)) return cloudLoginSheet('new', e, 'Please type a full email address.');
     if(p.length<8) return cloudLoginSheet('new', e, 'Use at least 8 characters.'); if(p!==p2) return cloudLoginSheet('new', e, 'The two passwords don’t match.');
@@ -2670,7 +2685,7 @@ const PK = { // how each exercise grows: kind + cap
   'marjaryasana':{k:'fixed'},'balasana':{k:'fixed'},'yoga-nidra':{k:'fixed'}
 };
 const kindOf = e => PK[e.id] || (e.cat==='Gym'&&e.type!=='time'?{k:'load',inc:2.5} : e.type==='time'?(e.cat==='Cardio'?{k:'cardio',cap:3600}:{k:'hold',cap:60}) : ['Calisthenics','Pelvic'].includes(e.cat)?{k:'reps'}:{k:'fixed'});
-function progStart(){ const g=S.goal||{}; return (g.sprint&&g.sprint.start) || g.startDate || todayKey(); }
+function progStart(){ const g=S.goal||{}; return (g.sprint&&(g.sprint.start||g.sprint.from)) || g.startDate || todayKey(); }
 function progWeek(k=todayKey()){ return Math.max(1, Math.floor(daysBetween(progStart(), k)/7)+1); }
 const easyWeek = (k=todayKey()) => !!(S.goal&&S.goal.sprint) && progWeek(k)===8;
 const pst = id => { S.prog ||= {}; return S.prog[id] ||= {step:0, miss:0, upWk:null, kg:null, r:0}; };
@@ -2793,6 +2808,40 @@ function chatSets(low){ let m, e, log=null;
   d.ex.push(entry); if(e.cat==='Breath') d.ticks.breath=true; const msg=progAfter(e.id, entry, it);
   return `💪 ${e.en}: ${entryText(entry,e)} (target ${tgtText(t,e)})${msg?' — '+msg:''}`; }
 
+/* =====================================================================
+   v2.1 — simple bright Today view, one-button login, auto-loaded profile
+   ===================================================================== */
+function simpleToday(d){ const loggedIn = typeof Cloud!=='undefined' && Cloud.user;
+  return `
+  ${!loggedIn?`<div class="card big-cta" data-act="cloudLogin"><div class="bc-ic">☁️</div><div class="grow"><b>Save my data online</b><div class="small">1 minute · your profile, goals and reports load automatically</div></div><span>→</span></div>`:''}
+  ${S.profile?'':setupPrompt()}
+  ${reviewCard()}
+  ${chatCard()}
+  <div class="quick-row">
+    <button class="qbtn" data-act="quickAdd"><span>🍽️</span>Add food</button>
+    <button class="qbtn" data-act="addWater" data-ml="250" data-n="Glass"><span>💧</span>+1 glass</button>
+    <button class="qbtn" data-act="sxStart" data-wd="7"><span>⚡</span>15-min</button>
+    <button class="qbtn" data-act="chat"><span>💬</span>Ask Riya</button>
+  </div>
+  ${mustsCard()}
+  ${workoutCard(parseKey(cur).getDay(), true)}
+  ${mealPlanCard(d)}
+  <button class="btn sec full" style="margin:6px 0 10px" data-act="todayAll">▼ Show everything (habits, water, sleep, care, food log)</button>
+  <p class="small muted" style="text-align:center">Coach, not doctor.</p>`; }
+Object.assign(A, {
+  noCloud:()=>{ closeSheet(); setTimeout(()=>wizard(0),350); },
+  todayAll:()=>{ S.ui ||= {}; S.ui.todayAll=true; save(true); render(); },
+  todaySimple:()=>{ S.ui ||= {}; S.ui.todayAll=false; save(true); render(); window.scrollTo({top:0}); }
+});
+(function(){ const st=document.createElement('style'); st.textContent=`
+:root[data-theme="light"]{ --bg:#fff8f1; --surface:#ffffff; --surface-2:#fff3e8; --border:#f3e3d3; --accent-weak:#ffeee4; }
+.big-cta{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#e0f2ff,#fff1e6);border:1px solid #cfe6fb;cursor:pointer}
+.big-cta .bc-ic{font-size:30px}.big-cta b{font-family:var(--font-d);font-size:16px}
+.quick-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
+.qbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);font-size:12px;font-weight:700;cursor:pointer}
+.qbtn span{font-size:22px}
+.login-hero{font-size:46px;text-align:center;margin:4px 0 2px}`; document.head.appendChild(st); })();
+
 /* ---------- safety copy on every version change (kept in the phone's bigger store, last 3 versions) ---------- */
 (function(){ try{ const prev=S.lastVersion; if(prev===VERSION) return; const snap=JSON.stringify(S);
   if(prev && Object.keys(S.days).length){ const r=indexedDB.open('ojas-safety',1); r.onupgradeneeded=()=>r.result.createObjectStore('s',{keyPath:'v'});
@@ -2801,6 +2850,6 @@ function chatSets(low){ let m, e, log=null;
   S.lastVersion=VERSION; save(true); }catch(e){} })();
 /* ---------------- start ---------------- */
 applyTheme(); render(); checkBadges(); loadPhotos(); levelUps(); maybeMorning(); setTimeout(()=>syncNow(),1200);
-if(!S.settings.onboarded) setTimeout(()=>wizard(0),400);
+if(!S.settings.onboarded) setTimeout(()=>{ if(typeof Cloud!=='undefined' && !Cloud.user) cloudLoginSheet('in'); else wizard(0); },400);
 window.__ojas = {progTarget, progAfter, progWeek, tgtText, actualsSheet, exHistory, chatSets, PDB, syncNow, syncPull, syncPush, cloudCount, changedDays, SY:()=>SY, SYNC, habLevel, habRate, HABITS, habWeek, setHab, reviewPending, treatsIn, treatPatterns, isTreat, inQuiet, NUDGES, vCreate, vUnlock, VAULT, morningInfo, drawMorningCanvas, levelUps, handleText, openChat, answerCheckin, nextCheckin, parseFoodPart, CHECKINS, PORTIONS, computePlan, bank, wgStatus, mustsDone, mustStreak, myWeekly, weekKeys, applySetupFile, wizard, readReport, weeklyReport, labStatus, sleepHours, SESSION:()=>SESSION, S:()=>S, dishMacros, allDishes, allEx, ING:()=>ING, version:VERSION, parseDose, exMedia, statsAll, journeyAt, stepStats, P:()=>P, plFinish, checkBadges};
 })();

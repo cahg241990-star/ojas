@@ -22,6 +22,7 @@ const Cloud = (() => {
   async function signUp(email, password) {
     const b = await j(await fetch(URL_ + '/auth/v1/signup', { method: 'POST', headers: H(), body: JSON.stringify({ email, password }) }));
     if (b && b.access_token) { take(b); return 'in'; }
+    const u = (b && b.user) || b; if (u && Array.isArray(u.identities) && u.identities.length === 0) throw Object.assign(new Error('User already registered'), { status: 422 });
     return 'confirm'; // Supabase sent a "Confirm your email" mail first
   }
   async function signIn(email, password) {
