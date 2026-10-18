@@ -1,7 +1,7 @@
 /* OJAS app logic. All personal data stays in this phone's browser storage (localStorage key "ojas.v1"). */
 (() => {
 'use strict';
-const VERSION = '2.6.0';
+const VERSION = '2.7.0';
 const DEMO = /[?&]demo=1\b/.test(location.search);
 const KEY = DEMO ? 'ojas.demo' : 'ojas.v1';
 const CLOUD_ON = () => !DEMO && typeof Cloud!=='undefined';
@@ -2457,7 +2457,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden && VAULT.k
 function privateCard(){ return `<div class="card"><h3>🔒 Private space</h3><div class="small muted" style="margin-bottom:10px">Passcode-locked and encrypted on this phone. Never shown in chat, reminders, badges, reports or shared pictures.</div>
   <button class="btn sec full" data-act="vaultOpen">${S.vault?'Open (passcode)':'Set up a passcode'}</button></div>`; }
 function vaultGate(msg){ const first=!S.vault;
-  openSheet(`<div id="vaultRoot"></div><h2>🔒 Private space</h2><div class="hih">${first?'Choose a passcode — 6 digits or more':'Enter your passcode'}</div>
+  openSheet(`<div id="vaultRoot"></div><h2>Vault</h2><div class="hih">${first?'Choose a passcode — 6 digits or more':'Enter your passcode'}</div>
     <input class="inp" id="vPin" type="password" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="••••••">
     ${first?'<input class="inp" id="vPin2" type="password" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Same passcode again" style="margin-top:8px">':''}
     ${msg?`<div class="small" style="color:var(--crit);margin-top:6px">${esc(msg)}</div>`:''}
@@ -2472,7 +2472,7 @@ function sleepLink(){ const L=VAULT.data.log; if(L.length<4) return 'Needs at le
   return `Sleep after those nights: <b>${r1(a)} h</b> vs other nights <b>${r1(o)} h</b>${a<o-0.3?' — late nights seem to cost you sleep. Earlier is better.':' — no real difference.'}`; }
 function vaultSheet(){ vTouch(); const V=VAULT.data; const t=todayKey();
   const rkWeek=weekKeys(t).filter(k=>V.rk.includes(k)).length;
-  openSheet(`<div id="vaultRoot"></div><h2>🔒 Private space</h2><div class="hih">Encrypted · locks after 3 min · <button class="mini" data-act="vaultLock">🔒 Lock now</button></div>
+  openSheet(`<div id="vaultRoot"></div><h2>Vault</h2><div class="hih">Encrypted · locks after 3 min · <button class="mini" data-act="vaultLock">🔒 Lock now</button></div>
     <div class="card"><h3>🔥 Pelvic floor</h3><div class="small muted">Daily Kegels are counted on Today. Reverse Kegels (gently relax and drop the pelvic floor while breathing out, 10 reps) 2× a week balance the muscle.</div>
       <div class="row" style="margin-top:8px;justify-content:space-between"><span class="small">Reverse Kegels this week: <b>${rkWeek}/2</b></span><button class="mini ${V.rk.includes(t)?'on':''}" data-act="vRk">${V.rk.includes(t)?'✓ Done today':'+ Done today'}</button></div></div>
     <div class="card"><h3>📅 Private log <span class="sub">date only</span></h3><div class="row" style="justify-content:space-between"><span class="small">${V.log.filter(k=>k>=addDays(t,-29)).length} in the last 30 days</span><span><button class="mini" data-act="vLog" data-k="${t}">${V.log.includes(t)?'✓ today':'+ today'}</button> <button class="mini" data-act="vLog" data-k="${addDays(t,-1)}">${V.log.includes(addDays(t,-1))?'✓ yesterday':'+ yesterday'}</button></span></div>
@@ -2902,7 +2902,7 @@ function dataCard(){ const on=CLOUD_ON()&&Cloud.user;
   return `<div class="card"><h3>📍 Where my data lives</h3>
     <div class="dl-row"><b>📱 On this phone</b><span class="small muted">Always. Works without internet. Deleting the Ojas icon deletes this copy.</span></div>
     <div class="dl-row"><b>☁️ Online</b><span class="small muted">${on?`Yes — copied to your private database (${esc(Cloud.user.email)}). Only your login can open it.`:'No — you are not logged in. Log in above to keep a safe copy.'} ${on&&!SY.noPhotos?'Body & skin photos: included.':on?'Photos: not included.':''}</span></div>
-    <div class="dl-row"><b>🔒 Private space</b><span class="small muted">Scrambled with your passcode before it is saved. Nobody else can read it — not even the server.</span></div>
+    <div class="dl-row"><b>Vault</b><span class="small muted">Scrambled with your passcode before it is saved. Nobody else can read it — not even the server.</span></div>
     <div class="dl-row"><b>📤 Shared</b><span class="small muted">Only what you share yourself. The morning card shows a quote, today's workout and the countdown — never weight, reports or photos.</span></div>
     ${on?`<button class="btn ghost full" style="color:var(--crit);margin-top:6px" data-act="cloudWipe">${wipeArm?'Tap again: delete ALL my online data':'Delete my online data'}</button>`:''}</div>`; }
 let wipeArm=false;
@@ -3293,7 +3293,7 @@ vFood = function(){
   <details class="card fold"><summary><span class="grow"><b>This week</b><small>${b&&b.left!=null?`${r0(Math.max(0,b.left)).toLocaleString('en-IN')} kcal left · `:''}treats, portion guide</small></span>${ico('down',18)}</summary>
     <div class="fold-in">${bankCard(todayKey())}${treatCard(todayKey())}${portionGuideCard()}</div></details>
   <div class="ds-label">${foodQ||foodCat!=='All'?'Results':'All dishes'} · ${list.length}</div>
-  <div class="small muted" style="margin:-4px 2px 10px"><span class="dot g"></span> everyday <span class="dot y"></span> sometimes <span class="dot r"></span> treat · per serving</div>
+  <div class="small muted" style="margin:-4px 2px 10px"><span class="dot g"></span> go <span class="dot y"></span> limit <span class="dot r"></span> avoid — for your reports · per serving</div>
   <div class="list" id="foodList">${list.map(dishCard).join('') || `<div class="card empty">No match. Try another word, or create it with “New dish”.</div>`}</div>
   <div class="ds-actions"><button class="btn sec" data-act="newDish">New dish</button><button class="btn sec" data-act="newIng">New ingredient</button></div>`;
 };
@@ -3402,6 +3402,301 @@ html.demo .food-top{top:calc(74px + env(safe-area-inset-top))}
 dsTidy = (orig => function(root){ orig(root); if(!root) return;
   root.querySelectorAll('.chip, .tick, .seg button, .tl-slot .mini').forEach(el=>{ const n=[...el.childNodes].find(x=>x.nodeType===3 && x.textContent.trim()); if(!n) return;
     const t=n.textContent.replace(LEAD_EMO,''); if(t.trim()) n.textContent=t; }); })(dsTidy);
+/* =====================================================================
+   v2.7 — Food check (Go / Limit / Avoid for YOUR reports), Home = progress
+          hub with link tiles + Daily minimum, Habits tab, Health inside
+          Progress, hidden Vault
+   ===================================================================== */
+
+/* ---------- 1. Food check ----------
+   Each rule: re (matches dish id + name, or what you type), v = go | limit | avoid,
+   slots = meals it is fine at, qty, form (how to make / eat it), freq, tags (why), swap.
+   Tags turn into reasons using YOUR latest lab numbers. */
+const FC_SLOTS = {breakfast:'breakfast', lunch:'lunch', snack:'evening snack', dinner:'dinner'};
+const FOOD_RULES = [
+  {re:/green tea|ccf|tulsi|herbal|kadha|elaichi.?saunf|jeera.?dhaniya/, n:'Green / herbal tea, kadha', v:'go', slots:['breakfast','lunch','snack','dinner'], qty:'1 cup', form:'No sugar. CCF or elaichi-saunf tea is great after dinner.', freq:'Daily'},
+  {re:/\bchai\b|masala tea|milk tea|\btea\b/, n:'Chai', v:'limit', slots:['breakfast','snack'], tags:['caffeine'], qty:'1–2 small cups a day', form:'No sugar, less milk; not on an empty stomach; none after 4 pm (sleep).', freq:'Daily is fine at this amount', swap:'Green tea, CCF tea or tulsi-adrak kadha.'},
+  {re:/coffee|latte|cappuccino|americano|espresso/, n:'Coffee', v:'limit', slots:['breakfast','lunch'], tags:['caffeine'], qty:'1 cup', form:'No sugar or syrup; black or with a little milk; none after 2 pm.', freq:'1 a day', swap:'Green tea.'},
+  // sweets & sugar — avoid
+  {re:/rasgull|rasogol|rosogol|chhena|sandesh/, n:'Rasgulla', v:'avoid', tags:['sugar'], qty:'Not even 1 for now', form:'It is chhena soaked in sugar syrup — 2 pieces carry about 6 teaspoons of sugar.', swap:'1 small bowl of papaya or guava with cinnamon, or 2 dates on a treat day.'},
+  {re:/gulab.?jamun|kala.?jamun|kalakand/, n:'Gulab jamun', v:'avoid', tags:['sugar','fried'], qty:'Not now', form:'Fried, then soaked in sugar syrup — the worst of both.', swap:'Baked apple with cinnamon, or 2 dates.'},
+  {re:/jalebi|imarti/, n:'Jalebi', v:'avoid', tags:['sugar','fried'], qty:'Not now', form:'Fried batter dipped in sugar syrup.', swap:'Roasted makhana or a fruit.'},
+  {re:/rasmalai|ras malai|rabri|rabdi|kulfi|basundi/, n:'Rasmalai / rabri / kulfi', v:'avoid', tags:['sugar','satfat'], qty:'Not now', form:'Full-fat milk boiled down with sugar.', swap:'Hung curd with cinnamon and a few berries (no sugar).'},
+  {re:/halwa|kheer|payasam|sheera|phirni/, n:'Halwa / kheer', v:'avoid', tags:['sugar','satfat'], qty:'Treat day only: 2 tablespoons', form:'Sugar + ghee + refined grain.', swap:'Ragi malt or oats with cinnamon, no sugar.'},
+  {re:/ladd?oo|barfi|burfi|peda|kaju katli|katli|mithai|soan papdi|sweet\b|sweets|mysore pak|chikki/, n:'Mithai (Indian sweets)', v:'avoid', tags:['sugar','satfat'], qty:'Festival only: 1 small piece', form:'Sugar and ghee in a small piece.', swap:'2 dates or 4 dried figs halves.'},
+  {re:/ice.?cream|mcflurry|soft serve|sundae|gelato/, n:'Ice cream', v:'avoid', tags:['sugar','satfat'], qty:'Not now', form:'Sugar + cream.', swap:'Frozen banana blended with cocoa (treat day), or chilled fruit.'},
+  {re:/cake|pastry|brownie|muffin|donut|doughnut|choco.?lava|cookie|biscuit/, n:'Cakes, pastries, biscuits', v:'avoid', tags:['sugar','refined','satfat'], qty:'Not now', form:'Maida + sugar + fat.', swap:'Roasted chana or a handful of soaked nuts.'},
+  {re:/dark choc/, n:'Dark chocolate (70%+)', v:'limit', slots:['lunch','snack'], tags:['sugar'], qty:'2 small squares (10 g)', form:'70% cocoa or more only.', freq:'2× a week', swap:'—'},
+  {re:/chocolate|dairy milk|kitkat|5 ?star|candy|toffee/, n:'Chocolate / candy', v:'avoid', tags:['sugar'], qty:'Not now', form:'Mostly sugar.', swap:'2 squares of 70% dark chocolate on a treat day.'},
+  {re:/^sugar\b|\bwith sugar\b|\b(cheeni|chini)\b/, n:'Sugar', v:'avoid', tags:['sugar'], qty:'Zero added sugar', form:'In tea, coffee, curd or lemon water — cut it fully.', swap:'Cinnamon or elaichi for flavour.'},
+  {re:/gud\b|jaggery|gur\b/, n:'Jaggery (gud)', v:'limit', slots:['lunch'], tags:['sugar'], qty:'1 small piece (5 g) after lunch', form:'It is still sugar, just less refined.', freq:'Not daily', swap:'Saunf after meals.'},
+  {re:/honey|shahad/, n:'Honey', v:'limit', slots:['breakfast','snack'], tags:['sugar'], qty:'1 teaspoon', form:'Never heat or cook it (Ayurveda) — add to warm, not hot, water.', freq:'Max 1 tsp a day', swap:'Ginger-lemon water without honey.'},
+  {re:/sweet potato|shakarkand/, n:'Sweet potato', v:'limit', slots:['breakfast','lunch','snack'], tags:['starch'], qty:'1 small (100 g), boiled or roasted', form:'Better than aloo; with chaat masala and lemon.', freq:'2–3× a week', swap:'—'},
+  // drinks
+  {re:/protein shake|whey/, n:'Protein shake', v:'go', slots:['breakfast','snack'], qty:'1 scoop in water or toned milk', form:'Unsweetened; only if food protein falls short.', freq:'Daily OK'},
+  {re:/cold.?drink|coke|cola|pepsi|sprite|fanta|thums|limca|soda\b|soft drink|energy drink|red bull/, n:'Cold drinks', v:'avoid', tags:['sugar'], qty:'Zero', form:'A 300 ml can has about 8 teaspoons of sugar.', swap:'Nimbu soda with salt (no sugar), or chaas.'},
+  {re:/juice|frooti|maaza|real\b|tropicana|shake|smoothie|lassi|frap|mocha|java chip|caramel/, n:'Juice, shakes, sweet lassi, frappé', v:'avoid', tags:['sugar'], qty:'Zero (eat the fruit instead)', form:'Liquid sugar — no fibre, big sugar spike.', swap:'Whole fruit, chaas, or a protein shake with water.'},
+  {re:/beer|wine|whisk|vodka|rum\b|alcohol|daru|sharab|gin\b|cocktail|breezer/, n:'Alcohol', v:'avoid', tags:['alcohol'], qty:'Zero during the sprint', form:'Alcohol goes straight to the liver; beer also raises uric acid.', swap:'Nimbu soda, coconut water, or kombucha (no sugar).'},
+  {re:/coconut water|nariyal/, n:'Coconut water', v:'go', slots:['breakfast','lunch','snack'], qty:'1 glass', form:'Fresh, not packaged.', freq:'Any day'},
+  {re:/chaas|buttermilk|takra|mattha/, n:'Chaas / takra', v:'go', slots:['lunch','snack'], qty:'1 glass (250 ml)', form:'Thin, no sugar; jeera + hing. Best with lunch (Ayurveda).', freq:'Daily', swap:'—'},
+  // fried & fast food
+  {re:/pav bhaji|vada pav|dabeli|pav\b/, n:'Pav bhaji / vada pav', v:'avoid', tags:['refined','satfat'], qty:'Treat only: bhaji with 1 pav, no butter', form:'White pav + lots of butter.', swap:'Bhaji (sabzi) with 1 multigrain roti.'},
+  {re:/sattu/, n:'Sattu drink', v:'go', slots:['breakfast','snack'], qty:'1 glass (2 tbsp sattu)', form:'Namkeen with jeera, lemon and salt — no sugar.', freq:'Daily OK'},
+  {re:/samosa|kachori|pakod|pakor|bhaji\b|bonda|vada\b|medu vada|puri\b|poori|bhatur|chole.?bhature|raj kachori|fries|chips|crisps|namkeen|bhujia|mixture|mathri|fafda|tikki|crispy|zinger/, n:'Fried snacks', v:'avoid', tags:['fried','refined'], qty:'Treat day only: 1 small piece, before 4 pm', form:'Deep-fried in reused oil — adds liver fat and triglycerides.', freq:'Counts as 1 of your 2 treats a week', swap:'Roasted chana, makhana, sprouts chaat, or air-fried tikki.'},
+  {re:/veggie delite|paneer tikka sub/, n:'Subway veg sub', v:'limit', slots:['lunch'], tags:['refined'], qty:'6-inch on multigrain bread', form:'No mayo, no extra cheese, all the veg; mint or mustard sauce.', freq:'Counts as 1 of your 2 treats a week', swap:'Paneer tikka with salad.'},
+  {re:/pizza|garlic bread|burger|whopper|mcveggie|maharaja|mcpuff|subway|sandwich.*(white|mayo)|mayo|pasta|white sauce|cheese.?burst/, n:'Pizza / burger / pasta', v:'avoid', tags:['refined','satfat'], qty:'Treat only: 1–2 slices thin crust, veg, at lunch', form:'Maida + cheese + sauces.', freq:'Counts as 1 of your 2 treats a week', swap:'Paneer tikka, or a multigrain veg sandwich.'},
+  {re:/maggi|noodle|chow.?mein|hakka|manchurian|fried rice|spring roll/, n:'Noodles / Indo-Chinese', v:'avoid', tags:['refined','fried'], qty:'Treat only: half plate at lunch', form:'Maida noodles, cornflour, oil and lots of salt.', swap:'Veg soup + tofu stir-fry.'},
+  {re:/momo/, n:'Momos', v:'limit', slots:['lunch','snack'], tags:['refined'], qty:'6 steamed pieces (never fried)', form:'Steamed, veg or paneer; skip mayo, small chutney.', freq:'Once a week', swap:'Moong chilla.'},
+  {re:/biryani|pulao/, n:'Biryani / pulao', v:'limit', slots:['lunch'], tags:['starch','satfat'], qty:'1 small plate (200 g) with raita and salad', form:'Veg; less oil; eat salad and raita first.', freq:'Once in 2 weeks', swap:'Veg dalia khichdi.'},
+  {re:/brown bread|multigrain bread|whole wheat bread|atta bread/, n:'Brown / multigrain bread', v:'limit', slots:['breakfast'], tags:['refined'], qty:'2 slices', form:'Check the label: whole wheat as the first ingredient.', freq:'3× a week', swap:'Moong chilla.'},
+  {re:/naan|kulcha|rumali|white bread|bread\b|bun\b|maida/, n:'Naan / white bread', v:'avoid', tags:['refined'], qty:'Instead: 1 tandoori roti', form:'Refined flour spikes sugar.', swap:'Tandoori atta roti, missi roti, or multigrain roti.'},
+  {re:/butter masala|makhani|malai kofta|shahi|korma|kofta/, n:'Creamy restaurant gravies', v:'limit', slots:['lunch'], tags:['satfat'], qty:'1 small katori', form:'Cream + butter + cashew paste.', freq:'Once a week', swap:'Kadhai paneer (lite) or palak paneer.'},
+  // legumes higher in purines — limit (uric acid)
+  {re:/rajma|kidney bean/, n:'Rajma', v:'limit', slots:['lunch'], tags:['purine','starch'], qty:'1 katori (150 g cooked)', form:'Soak 8–10 hours, throw the water away, pressure-cook well with hing, jeera and ginger (easier on gas). Eat with 1 roti + salad — not a big plate of rice.', freq:'Max 2× a week', swap:'Moong or masoor dal — any day.'},
+  {re:/chole|chhole|chana masala|kabuli|chickpea/, n:'Chole', v:'limit', slots:['lunch'], tags:['purine','starch'], qty:'1 katori (150 g cooked)', form:'Soaked overnight, pressure-cooked, less oil; with 1 roti and onion salad. Never with bhature.', freq:'Max 2× a week', swap:'Kala chana or moong dal.'},
+  {re:/kala.?chana|black chana/, n:'Kala chana', v:'limit', slots:['breakfast','lunch','snack'], tags:['purine'], qty:'1 katori (150 g cooked) or 30 g roasted', form:'Boiled or roasted; great protein and fibre.', freq:'Up to 3× a week', swap:'—'},
+  {re:/lobia|black.?eyed/, n:'Lobia', v:'limit', slots:['lunch'], tags:['purine'], qty:'1 katori (150 g cooked)', form:'Soaked, pressure-cooked, with hing.', freq:'Max 2× a week', swap:'Moong dal.'},
+  {re:/urad|dal makhani|maa ki dal/, n:'Urad / dal makhani', v:'limit', slots:['lunch'], tags:['purine','satfat'], qty:'1 small katori (100 g)', form:'Lite version: no cream, 1 tsp butter max.', freq:'Once a week', swap:'Panchmel or moong-masoor dal.'},
+  {re:/tofu/, n:'Tofu', v:'go', slots:['breakfast','lunch','dinner'], qty:'100 g', form:'Bhurji, stir-fry or in soup.', freq:'Daily OK'},
+  {re:/soya|soy chunk|nutrela|soya keema|tofu/, n:'Soya / tofu', v:'limit', slots:['lunch','dinner'], tags:['purine'], qty:'Soya chunks 30 g dry, or tofu 100 g', form:'Good protein. Tofu is the gentler choice.', freq:'Soya up to 3× a week; tofu any day', swap:'Paneer or moong.'},
+  {re:/mushroom/, n:'Mushroom', v:'limit', slots:['lunch','dinner'], tags:['purine'], qty:'1 katori', form:'Sautéed with little oil, no cream.', freq:'2× a week', swap:'Any green sabzi.'},
+  {re:/peas|matar/, n:'Matar', v:'go', slots:['lunch','dinner'], qty:'½ katori in a dish', form:'As part of a sabzi.', freq:'Any day'},
+  // starch & fruit sugar — limit (sugar average)
+  {re:/rice|chawal|curd.?rice|sambar.?rice/, n:'Rice', v:'limit', slots:['lunch'], tags:['starch'], qty:'1 small bowl (100–150 g cooked)', form:'Eat salad and dal first, rice last. Brown rice or cooled-then-reheated rice is gentler on sugar. Not at dinner.', freq:'Daily at lunch is fine at this amount', swap:'1 extra roti or jowar roti.'},
+  {re:/aloo|potato|aloo paratha/, n:'Aloo dishes', v:'limit', slots:['breakfast','lunch'], tags:['starch'], qty:'1 small katori (or 1 aloo paratha with 1 tsp ghee)', form:'Boiled or sabzi with other veg — never fried.', freq:'2× a week', swap:'Paneer or methi paratha; aloo-methi with more methi.'},
+  {re:/paratha/, n:'Paratha', v:'limit', slots:['breakfast'], tags:['satfat'], qty:'1 paratha, 1 tsp ghee', form:'Stuffed with paneer, methi or gobhi; with curd (morning only).', freq:'2–3× a week', swap:'Moong chilla.'},
+  {re:/mango|aam\b/, n:'Mango', v:'limit', slots:['breakfast','snack'], tags:['fruitsugar'], qty:'½ small mango (100 g)', form:'As a fruit, never as juice or shake; not after 6 pm.', freq:'In season, 3× a week', swap:'Guava, papaya or apple.'},
+  {re:/banana|kela/, n:'Banana', v:'limit', slots:['breakfast','snack'], tags:['fruitsugar'], qty:'1 small banana', form:'Best before a workout. Not at night.', freq:'Daily is OK', swap:'Apple or guava.'},
+  {re:/dates|khajur|khajoor/, n:'Dates', v:'limit', slots:['breakfast','snack'], tags:['fruitsugar'], qty:'2 dates', form:'As your sweet; with 5 almonds.', freq:'Treat days', swap:'—'},
+  {re:/grapes|angoor|chikoo|chiku|sapota|custard apple|sitaphal|litchi/, n:'Very sweet fruits', v:'limit', slots:['breakfast','snack'], tags:['fruitsugar'], qty:'1 small bowl (100 g)', form:'Whole fruit, morning or mid-day.', freq:'2× a week', swap:'Guava, papaya, apple, orange.'},
+  {re:/^(ghee|butter|makhan|desi ghee)\b|^ghee-tsp/, n:'Ghee / butter', v:'limit', slots:['breakfast','lunch','dinner'], tags:['satfat'], qty:'1–2 teaspoons for the whole day', form:'Measure it with a spoon; on roti or dal, not for frying.', freq:'Daily at this amount', swap:'—'},
+  {re:/peanut|moongphali|groundnut/, n:'Peanuts', v:'limit', slots:['breakfast','snack'], tags:[], qty:'1 small handful (30 g)', form:'Roasted, not salted/fried namkeen.', freq:'Daily OK', swap:'Roasted chana.'},
+  {re:/curd|dahi|raita|yogurt|yoghurt/, n:'Curd / raita', v:'go', slots:['breakfast','lunch','snack'], tags:['curdnight'], qty:'1 katori', form:'Daytime only — Ayurveda advises no curd after sunset; at night have chaas or dal.', freq:'Daily'},
+  {re:/paneer/, n:'Paneer', v:'go', slots:['breakfast','lunch','dinner'], qty:'80–100 g', form:'Grilled, bhurji or in sabzi — not butter/cream gravy.', freq:'Daily OK', swap:'—'},
+  {re:/sprout|moong|masoor|toor|arhar|dal\b|dal palak|panchmel/, n:'Dal / sprouts', v:'go', slots:['breakfast','lunch','dinner'], qty:'1 katori', form:'Tadka with 1 tsp ghee or oil.', freq:'Daily'},
+  {re:/salad|soup|sabzi|bhindi|lauki|tori|tinda|parwal|karela|palak|methi|saag|gobhi|cabbage|beans|baingan|kaddu|pumpkin|kadha|ccf|jeera water|methi water|ajwain|saunf|tulsi|green tea|amla|guava|papaya|apple|orange|pomegranate|anar|watermelon|jamun|pear|makhana|oats|idli|chilla|besan|dalia|khichdi|ragi|jowar|bajra|roti|multigrain|missi/, n:null, v:'go'},
+];
+function labLast(k){ const s=labSeries(k); return s.length?s[s.length-1][1]:null; }
+function labHi(k){ const m=LAB_MARKERS.find(x=>x.k===k); return m?m.hi:null; }
+function fcReasons(tags, name){ const out=[]; const u=labLast('uric'), a=labLast('hba1c'), tg=labLast('tg'), alt=labLast('alt');
+  for(const t of tags||[]){
+    if(t==='purine') out.push(u!=null&&u>(labHi('uric')||6)?`Your uric acid is ${u} (lab range below ${labHi('uric')||6}). ${name} has more purines than moong or masoor dal, so keep it small.`:`${name} is higher in purines — fine in small amounts.`);
+    if(t==='sugar'){ out.push(a!=null&&a>=5.7?`Your sugar average (HbA1c) is ${a}% — the warning zone starts at 5.7. Sugar pushes it up.`:'Added sugar works against fat loss.'); if(tg!=null&&tg>150) out.push(`Your triglycerides are ${tg} (range below 150) — sugar is one of the biggest drivers.`); }
+    if(t==='fried') out.push(alt!=null&&alt>(labHi('alt')||45)?`Your liver test ALT is ${alt} (range below ${labHi('alt')||45}) — deep-fried food adds liver fat.`:'Deep-fried food adds liver fat and lots of calories.');
+    if(t==='refined') out.push(a!=null&&a>=5.7?`Refined flour (maida) acts like sugar — your HbA1c is ${a}%.`:'Refined flour (maida) acts like sugar in the body.');
+    if(t==='starch') out.push(a!=null&&a>=5.7?`Starchy — with HbA1c ${a}%, keep the portion small and eat it with dal, sabzi and salad.`:'Starchy — keep the portion small.');
+    if(t==='fruitsugar') out.push(a!=null&&a>=5.7?`Sweet fruit — fine in a small portion, but with HbA1c ${a}% not a big bowl or juice.`:'Sweet fruit — small portion.');
+    if(t==='satfat') out.push(tg!=null&&tg>150?`Heavy in ghee/butter/cream — your triglycerides are ${tg}.`:'Heavy in ghee/butter/cream — high calories.');
+    if(t==='alcohol') out.push(`Alcohol is processed by the liver${alt!=null?` (your ALT is ${alt})`:''} and raises uric acid${u!=null?` (yours is ${u})`:''}.`);
+    if(t==='caffeine') out.push('Caffeine late in the day hurts sleep, and sleep drives hunger and weight.');
+    if(t==='curdnight') out.push('Ayurveda: curd at night is heavy and can worsen mucus and snoring.');
+  } return [...new Set(out)]; }
+function fcRuleFor(text){ const s=String(text||'').toLowerCase(); return FOOD_RULES.find(r=>r.re.test(s)) || null; }
+function fcGeneric(d){ const m=dishMacros(d), cat=d.cat||'';
+  if(cat==='Treats' || d.dot==='r') return {v:'avoid', tags:/sweet|jamun|halwa|ladoo/i.test(d.en)?['sugar']:['fried'], qty:'Treat day only, small', freq:'Counts as 1 of your 2 treats a week'};
+  if(cat==='Eating out') return {v:d.dot==='r'?'avoid':'limit', slots:['lunch'], tags:['refined','satfat'], qty:'1 portion, at lunch', freq:'Counts as 1 of your 2 treats a week'};
+  if(d.dot==='y') return {v:'limit', slots:cat==='Breakfast'?['breakfast']:['breakfast','lunch'], tags:m.f>15?['satfat']:['starch'], qty:unitG(d), freq:'2–3× a week'};
+  return {v:'go'}; }
+function fcSlotsFor(d){ const c=(d&&d.cat)||''; return c==='Breakfast'?['breakfast']:c==='Fruits'?['breakfast','snack']:c==='Snacks'?['breakfast','snack']:/Soup|Light Dinner/.test(c)?['lunch','dinner']:/drinks|Drinks/.test(c)?['breakfast','lunch','snack']:['lunch','dinner']; }
+/* verdict for a dish object or a typed name */
+function foodVerdict(arg){ let d=null, name='';
+  if(typeof arg==='string'){ name=arg; const r=parseFoodPart(arg); if(r && fcWordsMatch(arg, r.d)) d=r.d; const rt=fcRuleFor(arg); if(d && rt && rt.n && (d.cat==='Eating out' || !d.en.toLowerCase().startsWith(arg.trim().split(' ')[0]))) d=null; } else { d=arg; name=d.en; }
+  const key=d?`${d.id} ${d.en}`:name; let rule=fcRuleFor(key) || (d?null:fcRuleFor(name));
+  if(!rule && !d) return null;
+  if(rule && rule.v==='go' && d && (rule.n===null || d.cat==='Eating out' || d.dot==='r')){ const g=fcGeneric(d); if(g.v!=='go') rule=null; }
+  const base=rule || fcGeneric(d);
+  const nm = d ? d.en : (rule.n || name);
+  const slots = base.slots || fcSlotsFor(d);
+  const m = d ? dishMacros(d) : null;
+  return { name:nm, dish:d, v:base.v, slots,
+    qty: base.qty || (d?unitG(d):'1 normal serving'),
+    form: base.form || (d&&m?`${r0(m.k)} kcal · ${r0(m.p)} g protein per serving.`:''),
+    freq: base.freq || (base.v==='go'?'Any day':'—'),
+    why: fcReasons(base.tags||[], nm), swap: base.swap && base.swap!=='—' ? base.swap : '' }; }
+function fcWordsMatch(text, d){ const GEN=new Set(['can','have','eat','the','and','with','for','some','today','dinner','lunch','breakfast','snack','allowed','should','please','check','food','katori','bowl','plate']);
+  const words=String(text).toLowerCase().split(/[^a-z]+/).filter(w=>w.length>=3&&!GEN.has(w)); if(!words.length) return false;
+  const hay=(d.en+' '+d.id+' '+(d.hi||'')).toLowerCase(); return words.some(w=>hay.includes(w.replace(/s$/,'')) || (w.length>=5 && hay.includes(w.slice(0,5)))); }
+const FC_WORD={go:'GO — fine for you', limit:'LIMIT — yes, but only like this', avoid:'AVOID — not for now'};
+const slotList = sl => sl.map(s=>FC_SLOTS[s]||s).join(', ').replace(/, ([^,]*)$/,' or $1');
+function verdictText(V, askedSlot){ const L=[`${V.name}: ${FC_WORD[V.v]}`];
+  if(askedSlot && !V.slots.includes(askedSlot) && V.v!=='avoid') L.push(`Not at ${FC_SLOTS[askedSlot]} — have it at ${slotList(V.slots)}.`);
+  if(V.v!=='avoid') L.push(`When: ${slotList(V.slots)}${V.slots.includes('dinner')?'':' (not at dinner)'}`);
+  L.push(`How much: ${V.qty}`); if(V.form) L.push(`How: ${V.form}`); if(V.v!=='go' && V.freq && V.freq!=='—') L.push(`How often: ${V.freq}`);
+  if(V.why.length) L.push('Why: '+V.why.join(' ')); if(V.swap) L.push(`Better swap: ${V.swap}`);
+  L.push('(Coaching rule from your reports — your doctor’s advice comes first.)'); return L.join('\n'); }
+function verdictHTML(V){ return `<div class="fc-box fc-${V.v}"><div class="fc-top"><span class="fc-badge">${V.v==='go'?'Go':V.v==='limit'?'Limit':'Avoid'}</span><b>${V.v==='go'?'Fine for you':V.v==='limit'?'Yes — but only like this':'Not for now'}</b></div>
+  <div class="kv fc-kv">${V.v!=='avoid'?`<span>When</span><span>${esc(slotList(V.slots))}</span>`:''}<span>How much</span><span>${esc(V.qty)}</span>${V.v!=='go'&&V.freq&&V.freq!=='—'?`<span>How often</span><span>${esc(V.freq)}</span>`:''}</div>
+  ${V.form?`<div class="small" style="margin-top:8px">${esc(V.form)}</div>`:''}${V.why.length?`<div class="small muted" style="margin-top:6px">${esc(V.why.join(' '))}</div>`:''}
+  ${V.swap?`<div class="small" style="margin-top:6px"><b>Better swap:</b> ${esc(V.swap)}</div>`:''}<div class="small muted" style="margin-top:6px">Coaching rule from your reports — your doctor’s advice comes first.</div></div>`; }
+const FC_DOT={go:'g', limit:'y', avoid:'r'};
+dishCard = (orig => function(d){ const V=foodVerdict(d); return orig(d).replace(/class="dot [gyr]"/, `class="dot ${V?FC_DOT[V.v]:'g'}"`); })(dishCard);
+dishSheet = (orig => function(id){ orig(id); const d=dishById(id); const V=d&&foodVerdict(d); if(!V) return;
+  const sh=[...document.querySelectorAll('.sheet .body')].pop(); const anchor=sh&&sh.querySelector('.row.wrap'); if(anchor) anchor.insertAdjacentHTML('afterend', verdictHTML(V)); })(dishSheet);
+
+/* chat: "rajma" / "can I have rasgulla?" → verdict (+ Log button). "had 1 katori rajma" → logs + one-line check */
+const FC_SKIP=/^(yes|no|ok|okay|done|skip|skipped|undo|status|hi|hello|hey|thanks|thank you|water|steps?|sleep|weight|waist|help|plan|summary|progress|start|stop)\b/;
+function foodCheckIntent(low){ const s=low.trim().replace(/\s+/g,' '); if(!s || FC_SKIP.test(s) || s.length>80) return null;
+  const isQ=/\?$|^(can|could|should|may|is|are|am)\b|\b(allowed|ok to|okay to|safe to|good for me|bad for me|food check)\b|^check\b/.test(s);
+  const logVerb=/\b(ate|had|have had|drank|eaten|took|i'?ve had|log)\b/.test(s), num=/\d|\b(one|two|three|half|a|an)\s+(katori|bowl|plate|glass|cup|piece|pcs|roti|slice)/.test(s);
+  if(!isQ && (logVerb||num||/,| and | aur | with | plus /.test(s))) return null;
+  const asked=(/\b(breakfast|morning)\b/.test(s)?'breakfast':/\blunch\b/.test(s)?'lunch':/\b(dinner|night|tonight)\b/.test(s)?'dinner':/\b(snack|evening)\b/.test(s)?'snack':null);
+  const food=s.replace(/\?/g,' ').replace(/\b(can|could|should|may|i|we|is|are|am|it|ok|okay|to|eat|have|drink|take|allowed|safe|good|bad|for|me|a|an|some|the|please|check|food|today|tonight|now|at|in|on|lunch|dinner|breakfast|morning|night|evening|snack|my|with|or)\b/g,' ').replace(/\s+/g,' ').trim();
+  if(!food || (!isQ && food.split(' ').length>4)) return null;
+  const V=foodVerdict(food); return V?{V, asked}:null; }
+let FC_LOGGED=null;
+logDishQ = (orig => function(d, q, how){ const e=orig(d, q, how); if(FC_LOGGED) FC_LOGGED.push(e); return e; })(logDishQ);
+handleText = (orig => function(raw){ const t=String(raw||'').trim(); const low=t.toLowerCase();
+  if(t && !CH.confirm){ const fc=foodCheckIntent(low); if(fc){ meSay(t); const V=fc.V;
+      const opts=V.dish && V.v!=='avoid' ? [[`Log ${V.dish.en.slice(0,22)}`, '__logd:'+V.dish.id]] : V.dish ? [['Log it anyway','__logd:'+V.dish.id]] : null;
+      botSay(verdictText(V, fc.asked), opts); save(); if(sheetEl) drawChat(); return; } }
+  FC_LOGGED=[]; try{ orig.apply(this, arguments); } finally { const L=FC_LOGGED; FC_LOGGED=null;
+    const notes=(L||[]).map(e=>{ const d=dishById(e.dish); const V=d&&foodVerdict(d); if(!V||V.v==='go') return null; const late=e.slot==='dinner'&&!V.slots.includes('dinner');
+      return `Food check — ${V.name}: ${V.v==='limit'?'LIMIT':'AVOID'} · ${V.qty}${V.v==='limit'?' · '+slotList(V.slots):''}${late?' · not at dinner next time':''}.`; }).filter(Boolean);
+    if(notes.length){ botSay(notes.join('\n')); save(); if(sheetEl) drawChat(); } } })(handleText);
+A.chatOpt = (orig => function(el){ const v=el.dataset.v||''; if(v.startsWith('__logd:')){ const d=dishById(v.slice(7)); if(!d) return; meSay(el.dataset.l||'Log it');
+  const e=logDishQ(d, 1, ''); CH.last={undo:()=>{ const dd=day(); dd.del ||= []; dd.del.push(e.id); dd.food=dd.food.filter(f=>f!==e); }}; save(); render();
+  const tt=dayTotals(cur); botSay(`Saved: ${d.en} · ${r0(e.k)} kcal · ${r1(e.p)} g protein.\nToday: ${r0(tt.k)} kcal · ${r0(tt.p)} g protein.`, [['↩ Undo','__say:undo']]); if(sheetEl) drawChat(); return; }
+  return orig(el); })(A.chatOpt);
+window.__ojasFC=foodVerdict;
+/* the AI uses the same rules */
+aiContext = (orig => function(){ const base=orig(); const lines=FOOD_RULES.filter(r=>r.n).map(r=>`${r.n}: ${r.v}${r.qty?' ('+r.qty+')':''}`).join('; ');
+  return base+`\nFOOD RULES the app uses (always agree with these; if asked about a food, give Go/Limit/Avoid, when, how much, how to make it, and a swap): ${lines}.`; })(aiContext);
+
+/* ---------- 2. Daily minimum (the smallest day that still counts) ---------- */
+function minItems(){ const d=day(), k=cur, st=S.settings; const ok=m=>MUSTS[m]&&MUSTS[m].ok(d,k); const v=m=>MUSTS[m]?MUSTS[m].v(d,k):'';
+  return { diet:[
+      {t:`Protein ${Math.round((st.protein||90)*0.9)} g or more`, ok:ok('protein'), v:v('protein'), act:'quickAdd'},
+      {t:`Calories under ${(+st.kcal+100).toLocaleString('en-IN')}`, ok:ok('kcal'), v:v('kcal'), act:'quickAdd'},
+      {t:`Water ${r1((+st.waterMl||3000)/1000)} L`, ok:ok('water'), v:v('water'), act:'addWater'},
+      {t:'Dinner done by 8 pm', ok:ok('dinner'), v:v('dinner'), act:'mustTick', k:'dinner'},
+      {t:'No sugar, nothing deep-fried', ok:!d.food.some(f=>{ const dd=dishById(f.dish); const V=dd&&foodVerdict(dd); return V&&V.v==='avoid'; }), v:'checked from your food log'} ],
+    move:[
+      {t:`Steps ${stepsMin().toLocaleString('en-IN')} (minimum)`, ok:ok('steps'), v:v('steps'), act:'tab', tab:'train'},
+      {t:'15-min minimum workout — or today’s plan', ok:ok('workout')||(d.ex||[]).length>0, v:(d.ex||[]).length?`${d.ex.length} logged`:'not yet', act:'sxStart', wd:'7'},
+      {t:'Yoga / breathing 15 min', ok:ok('yoga'), v:v('yoga')} ],
+    habits: [...(HAS_PLAN?[['am','Morning care (brush, tongue, face)'],['pm','Night care (brush, face)']].map(([pt,t])=>{ const L=careList(pt).filter(c=>!c.opt); const n=L.filter(c=>(d.care||{})[c.id]).length; return {t, ok:L.length>0&&n>=Math.min(3,L.length), v:`${n} of ${L.length} ticked`, act:'tab', tab:'habits'}; }):[]),
+      ...myMusts().filter(m=>!['protein','kcal','water','dinner','steps','yoga','sleep','workout'].includes(m)).map(m=>({t:MUSTS[m].n.replace(LEAD_EMO,''), ok:ok(m), v:v(m), act:MUSTS[m].tick?'mustTick':null, k:MUSTS[m].tick}))],
+    sleep:[{t:'Sleep 7 hours+ (in bed by 11)', ok:ok('sleep'), v:v('sleep')}] }; }
+function minCount(){ const I=minItems(); const all=[...I.diet,...I.move,...I.habits,...I.sleep]; return {done:all.filter(x=>x.ok).length, n:all.length}; }
+function minSheet(only){ const I=minItems(); const sec=[['diet','Food'],['move','Move'],['habits','Habits'],['sleep','Sleep']].filter(([k])=>!only||k===only);
+  const c=minCount();
+  openSheet(`<h2>Daily minimum</h2><div class="hih">${only?'':`${c.done} of ${c.n} done today · `}The smallest day that still counts. On a bad day, do just this.</div>
+    ${sec.map(([k,t])=>`<div class="ds-label">${t}</div><div class="card min-card">${I[k].map(x=>`<div class="min-row ${x.ok?'ok':''}"><span class="mi">${x.ok?'✓':''}</span><span class="grow"><b>${esc(x.t)}</b><small>${esc(x.v||'')}</small></span>${x.act&&!x.ok?`<button class="btn sec sm" data-act="${x.act}"${x.k?` data-k="${x.k}"`:''}${x.tab?` data-tab="${x.tab}"`:''}${x.wd?` data-wd="${x.wd}"`:''}${x.act==='addWater'?' data-ml="250" data-n="Glass"':''}>${x.act==='quickAdd'?'Log food':x.act==='addWater'?'+1 glass':x.act==='sxStart'?'Start':x.act==='tab'?'Open':'Done'}</button>`:''}</div>`).join('')}</div>`).join('')}
+    <button class="btn pri full" style="margin-top:8px" data-act="sxStart" data-wd="7">${ico('bolt',18)}Start the 15-min minimum workout</button>`); }
+function minLink(area){ const I=minItems()[area]; if(!I) return ''; const done=I.filter(x=>x.ok).length;
+  const label={diet:'Food minimum',move:'Move minimum',habits:'Habits minimum'}[area];
+  return `<button class="min-link" data-act="minOpen" data-a="${area}"><span class="mi ${done===I.length?'ok':''}">${done===I.length?'✓':done}</span><span class="grow"><b>${label}</b><small>${done} of ${I.length} done · ${esc(I.find(x=>!x.ok)?.t||'all done today')}</small></span><span class="ds-chev">›</span></button>`; }
+Object.assign(A, { minOpen:el=>minSheet(el.dataset.a||null), mealPlanOpen:()=>{ openSheet(`<h2>Today's meal plan</h2>${mealPlanCard(day()).replace('<details class="card mp-card" ','<details class="card mp-card" open ')}`); } });
+
+/* ---------- 3. Home = progress + go ---------- */
+function homeScore(){ const d=day(), st=S.settings, t=dayTotals(); const ms=myMusts(), done=ms.filter(m=>MUSTS[m].ok(d,cur)).length;
+  const st1=stepsOf(d.steps), stT=+st.steps||10000, w=wml(d), wT=+st.waterMl||3000; const wk=workoutFor(parseKey(cur).getDay());
+  const row=(lab,val,pct,act,extra='')=>`<button class="sc-row" data-act="${act}" ${extra}><span class="grow"><b>${lab}</b><small>${val}</small></span><span class="sc-bar"><i style="width:${Math.round(Math.min(1,pct)*100)}%"></i></span></button>`;
+  return `<section class="card"><div class="ds-head" style="margin-bottom:6px"><h3 class="ds-title" style="margin:0!important">Today’s score</h3><span class="ds-count">${done} of ${ms.length} musts</span></div>
+    ${row('Daily musts', `${done} of ${ms.length} done`, done/ms.length, 'tab', 'data-tab="habits"')}
+    ${row('Steps', `${st1.toLocaleString('en-IN')} of ${stT.toLocaleString('en-IN')}`, st1/stT, 'tab', 'data-tab="train"')}
+    ${row('Water', `${r1(w/1000)} of ${r1(wT/1000)} L`, w/wT, 'addWater', 'data-ml="250" data-n="Glass"')}
+    ${row('Workout', (d.ex||[]).length?`${d.ex.length} logged`:(wk?esc(wk.title):'rest'), (d.ex||[]).length?1:0, 'tab', 'data-tab="train"')}</section>`; }
+function homeProgress(){ const g=S.goal||{}, p=S.profile||{}; const now=bodyKg(); const start=+g.startWeight||+p.weight; const goal=+g.weight;
+  const ws=Object.keys(S.days).sort().filter(k=>parseFloat(S.days[k].weight)>0).slice(-14).map(k=>parseFloat(S.days[k].weight));
+  const wa=Object.keys(S.days).sort().filter(k=>parseFloat(S.days[k].waist)>0).map(k=>parseFloat(S.days[k].waist)); const ev=g.event; const left=ev&&ev.date?daysBetween(todayKey(),ev.date):null;
+  if(!now && !ws.length) return '';
+  return `<button class="card hp-card" data-act="tab" data-tab="progress"><div class="ds-head" style="margin-bottom:8px"><h3 class="ds-title" style="margin:0!important">My progress</h3><span class="ds-chev">›</span></div>
+    <div class="hp-grid"><div><b>${now?r1(now):'—'}</b><small>kg now (7-day avg)</small></div><div><b class="${start&&now&&start-now>0?'good':''}">${start&&now?(start-now>0?'−':'+')+r1(Math.abs(start-now)):'—'}</b><small>kg since start</small></div>
+    <div><b>${goal&&now?r1(Math.max(0,now-goal)):'—'}</b><small>kg to goal ${goal||''}</small></div><div><b>${wa.length?wa[wa.length-1]+'"':'—'}</b><small>waist${g.waist?' · goal '+g.waist+'"':''}</small></div></div>
+    ${ws.length>1?`<div class="hp-spark">${spark(ws)}</div>`:''}${left!=null&&left>=0?`<div class="small muted" style="margin-top:6px">${left} days to ${esc(ev.name||'the function')} · ${mustStreak()}-day musts streak</div>`:''}</button>`; }
+function homeTiles(){ const c=minCount(); const d=day(); const pl=HAS_PLAN&&MEAL_PLANS[mealPlanIdx()]; const wk=workoutFor(parseKey(cur).getDay());
+  const T=(act,icon,t,s,extra='')=>`<button class="tile" data-act="${act}" ${extra}><span class="tile-ic">${ico(icon,22)}</span><b>${t}</b><small>${s}</small></button>`;
+  return `<div class="ds-label">Go to</div><div class="tiles">
+    ${T('minOpen','check','Daily minimum',`${c.done} of ${c.n} done`)}
+    ${T('mealPlanOpen','food','Food plan',pl?esc(pl.name):'meals & recipes')}
+    ${T('tab','play','Workout',wk?esc(wk.title).slice(0,28):'today’s plan','data-tab="train"')}
+    ${T('tab','check','Habits','levels & streaks','data-tab="habits"')}
+    ${T('openHealth','heart','Body & blood','reports, sleep, photos')}
+    ${T('chat','chat','Ask Riya','log or ask anything')}</div>`; }
+ICON.heart='<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>';
+ICON.home='<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>';
+simpleToday = function(d){ const loggedIn = !CLOUD_ON() || Cloud.user; const next = reviewCard() || repeatCard();
+  return `
+  ${!loggedIn?`<div class="card big-cta" data-act="cloudLogin"><div class="grow"><b>Save my data online</b><div class="small muted">1 minute · your profile, goals and reports load automatically</div></div><span class="ds-chev">›</span></div>`:''}
+  ${S.profile?'':setupPrompt()}
+  <div class="quick-row">
+    <button class="qbtn" data-act="quickAdd">${ico('food',22)}<span>Add food</span></button>
+    <button class="qbtn" data-act="addWater" data-ml="250" data-n="Glass">${ico('water',22)}<span>+1 glass</span></button>
+    <button class="qbtn" data-act="sxStart" data-wd="7">${ico('bolt',22)}<span>15-min</span></button>
+    <button class="qbtn" data-act="chat">${ico('chat',22)}<span>Ask Riya</span></button>
+  </div>
+  ${homeScore()}
+  ${homeProgress()}
+  ${next?`<div class="ds-label">Next</div>${next}`:''}
+  ${homeTiles()}
+  <button class="ds-link" data-act="todayAll">Full day view — food log, water, sleep, care ${ico('down',16)}</button>
+  <p class="ds-foot">Ojas is a coach, not a doctor.</p>`; };
+
+/* ---------- 4. Habits tab ---------- */
+function vHabits(){ const d=day(); return `${minLink('habits')}${reviewCard()}${mustsCard()}${careCard(d)}${habAlertsCard()}${habitsCard().replace(/<details class="[^"]*"/g, m=>m)}`; }
+
+/* ---------- 5. Health lives inside Progress ---------- */
+vProgress = (orig => function(){ const sub=S.ui?.progSub||'prog';
+  const seg=`<div class="seg prog-seg"><button class="${sub==='prog'?'on':''}" data-act="progSub" data-s="prog">My progress</button><button class="${sub==='health'?'on':''}" data-act="progSub" data-s="health">Body & blood</button></div>`;
+  if(sub==='health') return seg + vHealth();
+  return seg + orig().replace(habitsCard(), `<button class="min-link" data-act="tab" data-tab="habits"><span class="mi">${ico('check',16)}</span><span class="grow"><b>Habit levels</b><small>moved to the Habits tab</small></span><span class="ds-chev">›</span></button>`); })(vProgress);
+Object.assign(A, {
+  progSub:el=>{ S.ui ||= {}; S.ui.progSub=el.dataset.s; save(true); render(); window.scrollTo({top:0}); },
+  openHealth:()=>{ S.ui ||= {}; S.ui.progSub='health'; tab='progress'; closeSheet(); render(); window.scrollTo({top:0}); },
+});
+A.tab = (orig => function(el, ev){ if(el && el.dataset && el.dataset.tab==='health'){ S.ui ||= {}; S.ui.progSub='health'; tab='progress'; closeSheet(); render(); window.scrollTo({top:0}); return; } return orig(el, ev); })(A.tab);
+/* minimum links at the top of Food and Train */
+vFood = (orig => function(){ return minLink('diet') + orig(); })(vFood);
+vTrain = (orig => function(){ return minLink('move') + orig(); })(vTrain);
+render = (orig => function(){
+  if(tab==='health'){ S.ui ||= {}; S.ui.progSub='health'; tab='progress'; }
+  if(tab!=='habits') return orig.apply(this, arguments);
+  $('#dateLabel').textContent = niceDate(cur); $('#datenav').style.visibility='visible';
+  $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab)); $('#fab').style.display='none';
+  const m=$('#main'); m.innerHTML=`<div class="view">${vHabits()}</div>`; mountFigs(m); afterRender(m); dsTidy(m); })(render);
+
+/* ---------- 6. Vault: neutral name, hidden entry (hold the Ojas logo) ---------- */
+privateCard = (orig => function(){ if(S.settings.vaultHidden) return ''; return `<div class="card"><h3>Vault</h3><div class="small muted" style="margin-bottom:10px">Passcode-locked notes, encrypted on this phone. Never shown anywhere else.</div>
+  <button class="btn sec full" data-act="vaultOpen">${S.vault?'Open (passcode)':'Set up a passcode'}</button></div>`; })(privateCard);
+vaultSheet = (orig => function(){ const r=orig.apply(this, arguments); const sh=[...document.querySelectorAll('.sheet .body')].pop();
+  if(sh && !sh.querySelector('.vault-hide')) sh.insertAdjacentHTML('beforeend', `<div class="card vault-hide"><b>Hide the Vault</b><div class="small muted" style="margin:4px 0 10px">${S.settings.vaultHidden?'Hidden from the Me tab. Open it by holding the Ojas logo (top left) for 1 second.':'Remove it from the Me tab. You can still open it by holding the Ojas logo (top left) for 1 second.'}</div><button class="btn sec full" data-act="vaultHideT">${S.settings.vaultHidden?'Show it in the Me tab again':'Hide it from the Me tab'}</button></div>`);
+  return r; })(vaultSheet);
+A.vaultHideT = ()=>{ S.settings.vaultHidden=!S.settings.vaultHidden; save(); toast(S.settings.vaultHidden?'Hidden. Hold the Ojas logo to open it.':'Shown in the Me tab again'); vaultSheet(); };
+(function(){ const lg=document.querySelector('.hdr .brand'); if(!lg) return; let tm=null; const go=()=>{ tm=null; if(navigator.vibrate) navigator.vibrate(20); A.vaultOpen(); };
+  const start=e=>{ tm=setTimeout(go, 900); }, stop=()=>{ if(tm){ clearTimeout(tm); tm=null; } };
+  lg.addEventListener('touchstart',start,{passive:true}); lg.addEventListener('touchend',stop); lg.addEventListener('touchmove',stop,{passive:true});
+  lg.addEventListener('mousedown',start); lg.addEventListener('mouseup',stop); lg.addEventListener('mouseleave',stop); lg.style.webkitUserSelect='none'; lg.style.userSelect='none'; })();
+ME_GROUPS.find(g=>g[0]==='priv')[3]=/where my data|private space|vault|erase|delete/i;
+ME_GROUPS.find(g=>g[0]==='priv')[2]='Where data lives, erase';
+
+(function(){ const st=document.createElement('style'); st.textContent=`
+.fc-box{border-radius:14px;padding:14px;margin:0 0 14px;border:1px solid var(--border);background:var(--surface)}
+.fc-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}.fc-top b{font-size:15.5px}
+.fc-badge{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:99px;padding:4px 10px;color:#fff}
+.fc-go .fc-badge{background:var(--good)}.fc-limit .fc-badge{background:var(--watch);color:#1b1300}.fc-avoid .fc-badge{background:var(--crit)}
+.fc-go{border-color:color-mix(in srgb,var(--good) 40%,var(--border))}.fc-limit{border-color:color-mix(in srgb,var(--watch) 45%,var(--border))}.fc-avoid{border-color:color-mix(in srgb,var(--crit) 45%,var(--border))}
+.fc-kv{font-size:14px}.fc-kv span:nth-child(odd){color:var(--muted)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px;border-radius:16px;border:1px solid var(--border);background:var(--surface);color:var(--fg);cursor:pointer;box-shadow:var(--shadow);font:inherit;min-height:104px}
+.tile b{font-size:15px}.tile small{font-size:13px;color:var(--muted);line-height:1.3}
+.tile-ic{width:38px;height:38px;border-radius:12px;background:var(--accent-weak);color:var(--accent);display:grid;place-items:center;margin-bottom:4px}
+.sc-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border:0;border-top:1px solid var(--border);background:none;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
+.sc-row:first-of-type{border-top:0}.sc-row b{font-size:15px;display:block}.sc-row small{font-size:13px;color:var(--muted)}
+.sc-bar{width:96px;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;flex:none}.sc-bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.hp-card{display:block;width:100%;text-align:left;color:var(--fg);font:inherit;cursor:pointer}
+.hp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px}.hp-grid b{display:block;font-family:var(--font-d);font-size:20px}.hp-grid b.good{color:var(--good)}.hp-grid small{font-size:12px;color:var(--muted);line-height:1.25;display:block}
+.hp-spark{margin-top:10px;color:var(--accent)}.hp-spark .spark{width:100%;height:36px;opacity:1}
+.min-link{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 12px;padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));background:var(--accent-weak);color:var(--fg);font:inherit;text-align:left;cursor:pointer}
+.min-link b{font-size:15px;display:block}.min-link small{font-size:13px;color:var(--muted)}
+.min-link .mi,.min-row .mi{width:28px;height:28px;flex:none;border-radius:50%;border:2px solid var(--border);display:grid;place-items:center;font-size:13px;font-weight:800;color:var(--fg)}
+.min-link .mi.ok,.min-row.ok .mi{background:var(--good);border-color:var(--good);color:#fff}
+.min-card{padding:4px 14px}.min-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}.min-row:first-child{border-top:0}
+.min-row b{font-size:14.5px;display:block}.min-row small{font-size:13px;color:var(--muted)}.min-row.ok b{color:var(--muted)}
+.prog-seg{margin:0 0 12px}
+.hdr .brand{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+`; document.head.appendChild(st); })();
+
 /* ---------------- start ---------------- */
 applyTheme(); render(); checkBadges(); loadPhotos(); levelUps(); maybeMorning(); setTimeout(()=>syncNow(),1200);
 if(DEMO){ document.documentElement.classList.add("demo"); demoSetup(); }
