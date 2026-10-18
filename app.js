@@ -1,11 +1,13 @@
 /* OJAS app logic. All personal data stays in this phone's browser storage (localStorage key "ojas.v1"). */
 (() => {
 'use strict';
-const VERSION = '2.1.0';
-const KEY = 'ojas.v1';
+const VERSION = '2.6.0';
+const DEMO = /[?&]demo=1\b/.test(location.search);
+const KEY = DEMO ? 'ojas.demo' : 'ojas.v1';
+const CLOUD_ON = () => !DEMO && typeof Cloud!=='undefined';
 
 /* ---------------- storage ---------------- */
-const DEFAULT_SETTINGS = {kcal:2000, protein:90, carbs:235, fat:60, water:12, waterMl:3000, steps:8000, heightCm:170, kg:'', theme:'light', voice:'en', rest:45, avatar:'flame', onboarded:false};
+const DEFAULT_SETTINGS = {kcal:2000, protein:90, carbs:235, fat:60, water:12, waterMl:3000, steps:8000, heightCm:170, kg:'', theme:'dark', voice:'en', rest:45, avatar:'flame', onboarded:false};
 function freshState(){ return {v:1, settings:{...DEFAULT_SETTINGS}, days:{}, customDishes:[], customIngs:[], customEx:[], links:{}, favs:[], bottles:[], photo:'', meas:[], labs:{}, retest:null, mealPick:{}, ui:{}, rungs:{push:1,pull:1,squat:1,hip:1,core:1}}; }
 function load(){
   try{ const raw = localStorage.getItem(KEY); if(!raw) return freshState();
@@ -14,13 +16,15 @@ function load(){
   }catch(e){ return freshState(); }
 }
 let S = load();
-if(!S.ui) S.ui={}; if(!S.ui.bright21){ S.ui.bright21=true; if(S.settings.theme==='auto') S.settings.theme='light'; }
+if(!S.ui) S.ui={}; if(!S.ui.bright21){ S.ui.bright21=true; }
+if(!S.ui.ocean25){ S.ui.ocean25=true; S.settings.theme='dark'; } /* v2.5: Ocean Calm dark look chosen by the user */
 let storageOK = true; let SAVE_N = 0;
 function save(quiet){ SAVE_N++; try{ localStorage.setItem(KEY, JSON.stringify(S)); storageOK = true; }catch(e){ storageOK = false; toast('⚠️ Could not save — storage blocked'); } if(!quiet && typeof queueBadges==='function') queueBadges(); }
 
 /* ---------------- helpers ---------------- */
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+const HI = s => (S && S.settings && S.settings.hindi) ? (s||'') : '';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const r0 = n => Math.round(n||0);
 const r1 = n => Math.round((n||0)*10)/10;
@@ -54,7 +58,7 @@ function bodyKg(){ const v = parseFloat(S.settings.kg); if(v>30) return v;
 let toastT;
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200); }
 function confetti(){
-  const cols=['#ffb347','#ff6a3d','#ff3d7f','#7b5cff','#12b886','#38bdf8'];
+  const cols=['#38bdf8','#2563eb','#60a5fa','#6366f1','#14b8a6','#f59e0b'];
   for(let i=0;i<40;i++){ const c=document.createElement('div'); c.className='confetti';
     c.style.left=Math.random()*100+'vw'; c.style.background=cols[i%cols.length];
     c.style.animationDuration=(1.6+Math.random()*1.6)+'s'; c.style.animationDelay=(Math.random()*.4)+'s';
@@ -108,14 +112,14 @@ const FIGS = new Set(); let figObs = null; let figRAF = 0;
 function figSVG(animKey, cls='fig'){
   const a = ANIMS[animKey] || ANIMS.sit; const gid='g'+uid();
   return `<svg class="${cls}" viewBox="0 -12 200 204" data-anim="${esc(animKey)}" aria-hidden="true">
-  <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset=".5" stop-color="#ff6a3d"/><stop offset="1" stop-color="#ff3d7f"/></linearGradient></defs>
+  <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset=".5" stop-color="#2563eb"/><stop offset="1" stop-color="#1e40af"/></linearGradient></defs>
   ${propSVG(a.prop)}
   <line x1="8" y1="181" x2="192" y2="181" stroke="currentColor" stroke-opacity=".12" stroke-width="2"/>
-  <circle class="p-glow" cx="100" cy="100" r="0" fill="#ff6a3d" opacity="0"/>
-  <g class="limb" stroke="#7b5cff" stroke-opacity=".55" stroke-width="8"><polyline class="p-bl"/><polyline class="p-ba"/></g>
+  <circle class="p-glow" cx="100" cy="100" r="0" fill="#38bdf8" opacity="0"/>
+  <g class="limb" stroke="#6366f1" stroke-opacity=".55" stroke-width="8"><polyline class="p-bl"/><polyline class="p-ba"/></g>
   <line class="p-t limb" stroke="url(#${gid})" stroke-width="11"/>
   <g class="limb" stroke="url(#${gid})" stroke-width="8.5"><polyline class="p-fl"/><polyline class="p-fa"/></g>
-  <circle class="p-h" r="11" fill="#ffd9a8" stroke="#ff3d7f" stroke-width="3"/>
+  <circle class="p-h" r="11" fill="#ffd9a8" stroke="#2563eb" stroke-width="3"/>
   <g class="p-db"></g><line class="p-cable" stroke="currentColor" stroke-opacity=".35" stroke-width="2"/>
   </svg>`;
 }
@@ -127,7 +131,7 @@ function propSVG(p){
     case 'wall': return `<rect x="162" y="30" width="10" height="151" rx="3" fill="${c}" fill-opacity=".15"/>`;
     case 'counter': return `<rect x="156" y="100" width="40" height="81" rx="6" fill="${c}" fill-opacity=".12"/>`;
     case 'chair': return `<rect x="48" y="132" width="40" height="7" rx="3" fill="${c}" fill-opacity=".25"/><line x1="52" y1="139" x2="52" y2="181" stroke="${c}" stroke-opacity=".25" stroke-width="4"/><line x1="84" y1="139" x2="84" y2="181" stroke="${c}" stroke-opacity=".25" stroke-width="4"/><line x1="50" y1="134" x2="50" y2="96" stroke="${c}" stroke-opacity=".25" stroke-width="4"/>`;
-    case 'mat': return `<rect x="12" y="180" width="176" height="6" rx="3" fill="#7b5cff" fill-opacity=".35"/>`;
+    case 'mat': return `<rect x="12" y="180" width="176" height="6" rx="3" fill="#6366f1" fill-opacity=".35"/>`;
     case 'box': return `<rect x="104" y="157" width="46" height="24" rx="4" fill="${c}" fill-opacity=".16"/>`;
     case 'bench': return `<rect x="26" y="139" width="96" height="8" rx="3" fill="${c}" fill-opacity=".25"/><line x1="40" y1="147" x2="40" y2="181" stroke="${c}" stroke-opacity=".22" stroke-width="4"/><line x1="108" y1="147" x2="108" y2="181" stroke="${c}" stroke-opacity=".22" stroke-width="4"/>`;
     default: return '';
@@ -230,9 +234,9 @@ function vToday(){
   let tl='';
   for(const [sid,sn] of SLOTS){ const arr=(bySlot[sid]||[]).sort((a,b)=>a.t.localeCompare(b.t)); if(!arr.length) continue;
     const sk=arr.reduce((s,e)=>s+e.k,0), sp=arr.reduce((s,e)=>s+e.p,0);
-    tl+=`<div class="tl-slot"><span>${sn}</span><span>${r0(sk)} kcal · ${r0(sp)} g P</span></div>`;
+    tl+=`<div class="tl-slot"><span>${sn} <button class="mini" data-act="mealSaveOpen" data-s="${sid}">⭐ save</button></span><span>${r0(sk)} kcal · ${r0(sp)} g P</span></div>`;
     tl+=arr.map(e=>`<div class="item" data-act="editEntry" data-id="${e.id}"><div class="emo">${esc(e.e||'🍽️')}</div>
-      <div class="txt"><div class="t1">${esc(e.name)}</div><div class="t2">${esc(e.t)} · ${r1(e.qty)} × ${esc(e.unit||'serving')}</div></div>
+      <div class="txt"><div class="t1">${esc(e.name)}</div><div class="t2">${esc(e.t)} · ${r1(e.qty)} × ${esc(e.unit||'serving')}${e.est?' · <span class="chat-est">estimate</span>':''}</div></div>
       <div class="meta"><b>${r0(e.k)}</b>${r0(e.p)} g P</div><button class="x" data-act="delEntry" data-id="${e.id}" aria-label="Delete">×</button></div>`).join('');
   }
   const exList = d.ex.map(e=>`<div class="item" data-act="openEx" data-id="${e.ex}">${exThumb(exById(e.ex))}
@@ -246,11 +250,11 @@ function vToday(){
     <div class="rings">
       ${ringSVG(t.k, st.kcal, 'Calories','')}${ringSVG(t.p, st.protein, 'Protein','g')}${ringSVG(t.c, st.carbs, 'Carbs','g')}${ringSVG(t.f, st.fat, 'Fat','g')}
     </div>
-    <div class="small" style="position:relative;margin-top:10px;opacity:.92">Eaten ${r0(t.k)} kcal · Burned ~${r0(t.burn+walk.kcal)} (workouts ${r0(t.burn)} + walking ${r0(walk.kcal)}) · Net ${r0(t.k-t.burn-walk.kcal)}</div>
+    <div class="small" style="position:relative;margin-top:10px;opacity:.92">Eaten ${r0(t.k).toLocaleString('en-IN')} of ${(+st.kcal).toLocaleString('en-IN')} kcal · ${r0(t.p)} of ${st.protein} g protein</div>
     <div class="small" style="position:relative;margin-top:4px;opacity:.92">${bankLine()}</div>
   </section>
 `;
-  if(S.settings.simple!==false && !(S.ui&&S.ui.todayAll)) return HERO+simpleToday(d);
+  if(S.settings.simple!==false && !(S.ui&&S.ui.todayAll)) return heroSimple()+simpleToday(d);
   return HERO+`
   <button class="btn ghost full" data-act="todaySimple">▲ Back to simple view</button>
   ${setupPrompt()}
@@ -302,7 +306,7 @@ function vToday(){
 function dishCard(d){
   const m=dishMacros(d);
   return `<div class="item" data-act="openDish" data-id="${esc(d.id)}"><div class="emo">${esc(d.e||'🍽️')}<span class="dot ${d.dot||'g'}"></span></div>
-  <div class="txt"><div class="t1">${esc(d.en)}</div><div class="t2"><span class="hi">${esc(d.hi||'')}</span> · ${esc(unitG(d))}</div></div>
+  <div class="txt"><div class="t1">${esc(d.en)}</div><div class="t2">${HI(d.hi)?`<span class="hi">${esc(HI(d.hi))}</span> · `:''}${esc(unitG(d))}</div></div>
   <div class="meta"><b>${r0(m.k)}</b><span class="pill p">${r0(m.p)} g P</span></div></div>`;
 }
 function filterDishes(q, cat){
@@ -324,7 +328,7 @@ function vFood(){
   ${treatCard(todayKey())}
   ${portionGuideCard()}
   <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity=".5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-    <input id="foodSearch" placeholder="Search dish or ingredient — e.g. moong, paneer, दाल" value="${esc(foodQ)}" autocomplete="off"></div>
+    <input id="foodSearch" placeholder="Search dish or ingredient — e.g. moong, paneer, dal" value="${esc(foodQ)}" autocomplete="off"></div>
   <div class="chips">${cats.map(c=>`<button class="chip ${c===foodCat?'on':''}" data-act="foodCat" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
   <div class="row" style="margin:4px 0 12px"><button class="btn pri grow" data-act="newDish">+ New dish</button><button class="btn sec" data-act="newIng">+ Ingredient</button></div>
   <div class="small muted" style="margin:0 4px 8px">${list.length} dishes · <span class="dot g"></span> everyday <span class="dot y"></span> sometimes <span class="dot r"></span> treat · numbers per serving</div>
@@ -335,19 +339,20 @@ function dishSheet(id){
   const d=dishById(id); if(!d) return;
   const m=dishMacros(d); const L=ytLinks('dish',d); const fav=S.favs.includes(d.id);
   const dotLabel={g:'Everyday',y:'Sometimes',r:'Treat — rarely'}[d.dot||'g'];
-  const rows=(d.ing||[]).map(([iid,g])=>{const a=ING.get(iid); if(!a) return ''; return `<tr><td><span class="hi">${esc(a[2])}</span><div class="small muted">${esc(a[1])}</div></td><td>${r1(g)} g</td></tr>`;}).join('');
+  const rows=(d.ing||[]).map(([iid,g])=>{const a=ING.get(iid); if(!a) return ''; return `<tr><td>${esc(a[1])}${HI(a[2])?`<div class="small muted hi">${esc(a[2])}</div>`:''}</td><td>${r1(g)} g</td></tr>`;}).join('');
   openSheet(`
     <div class="dish-hero"><span>${esc(d.e||'🍽️')}</span></div>
-    <h2>${esc(d.en)}</h2><div class="hih">${esc(d.hi||'')}</div>
+    <h2>${esc(d.en)}</h2>${HI(d.hi)?`<div class="hih">${esc(HI(d.hi))}</div>`:''}
     <div class="row wrap" style="gap:6px;margin-bottom:12px"><span class="pill"><span class="dot ${d.dot||'g'}"></span>${dotLabel}</span><span class="pill">${esc(d.cat||'')}</span>${d.reg?`<span class="pill">${esc(d.reg)}</span>`:''}${d.mine?'<span class="pill p">My dish</span>':''}</div>
     <div class="card" style="padding:12px"><div class="small muted" style="margin-bottom:8px;font-weight:700">PER SERVING · ${esc(unitG(d))}${d.ing&&d.ing.length&&!/cup|glass|ml/i.test(d.unit||'')?' cooked':''}</div>
       <div class="mac"><div><b style="color:var(--kcal)">${r0(m.k)}</b><span>kcal</span></div><div><b style="color:var(--prot)">${r1(m.p)}</b><span>protein g</span></div><div><b style="color:var(--carb)">${r1(m.c)}</b><span>carbs g</span></div><div><b style="color:var(--fat)">${r1(m.f)}</b><span>fat g</span></div></div></div>
     <div class="row" style="margin-bottom:10px"><button class="btn pri grow" data-act="logDish" data-id="${esc(d.id)}">+ Log this</button><button class="btn sec" data-act="fav" data-id="${esc(d.id)}">${fav?'★ Saved':'☆ Save'}</button></div>
-    <div class="row" style="margin-bottom:16px"><a class="btn yt" href="${esc(L.hi)}" target="_blank" rel="noopener">▶ ${L.ownHi?'Your video':'Watch'} · हिंदी</a><a class="btn yt en" href="${esc(L.en)}" target="_blank" rel="noopener">▶ ${L.ownEn?'Your video':'Watch'} · English</a></div>
+    <div class="row" style="margin-bottom:16px"><a class="btn yt" href="${esc(L.hi)}" target="_blank" rel="noopener">▶ ${L.ownHi?'Your video':'Watch'} · Hindi</a><a class="btn yt en" href="${esc(L.en)}" target="_blank" rel="noopener">▶ ${L.ownEn?'Your video':'Watch'} · English</a></div>
     <div class="tip" style="margin-bottom:12px">🍽️ <b>How much to eat:</b> ${esc(unitG(d))} ${/cup|glass|ml/i.test(d.unit||'')?'in your cup / glass.':'on your plate.'} ${/katori/i.test(d.unit||'')?'1 katori = 150 g ≈ ¾ cup.':/bowl/i.test(d.unit||'')?'1 bowl = 250 g ≈ 1¼ cups.':/plate/i.test(d.unit||'')?'Fill the plate once, no second helping.':''} Weigh your katori and bowl once on a kitchen scale (Me → My katori).</div>
-    ${rows?`<div class="card"><h3>Ingredients <span class="sub">raw, for ONE serving · हिंदी · English</span></h3><table class="tbl">${rows}</table><div class="small muted" style="margin-top:6px">Cooking for 2–3 people? Multiply every number. Raw dal/grain swells 3–4× when cooked.</div></div>`:''}
+    ${rows?`<div class="card"><h3>Ingredients <span class="sub">raw weights for ONE serving</span></h3><table class="tbl">${rows}</table><div class="small muted" style="margin-top:6px">Cooking for 2–3 people? Multiply every number. Raw dal/grain swells 3–4× when cooked.</div></div>`:''}
     ${(d.steps||[]).length?`<div class="card"><h3>How to make</h3><ol class="steps">${d.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>`:''}
     ${d.tip?`<div class="tip">💡 ${esc(d.tip)}</div>`:''}
+    ${d.cat==='Ayurvedic drinks'?'<div class="small muted" style="margin-top:6px">A traditional home drink that supports good habits — not a medicine or treatment. Keep taking what your doctor prescribed.</div>':''}
     <details class="card" style="margin-top:14px"><summary style="font-weight:700;cursor:pointer">🎬 Add my own YouTube video</summary>
       <label class="f">Hindi video link</label><input class="inp" id="lkHi" placeholder="https://youtube.com/..." value="${esc((S.links['dish:'+d.id]||{}).hi||'')}">
       <label class="f">English video link</label><input class="inp" id="lkEn" placeholder="https://youtube.com/..." value="${esc((S.links['dish:'+d.id]||{}).en||'')}">
@@ -413,7 +418,8 @@ function quickAddSheet(){
   const rec=recentIds.slice(0,6).map(dishById);
   const favs=S.favs.map(dishById).filter(Boolean);
   openSheet(`<h2>Log food</h2><div class="small muted" style="margin-bottom:10px">Adding to ${esc(niceDate(cur))}</div>
-    <div class="search"><input id="qaSearch" placeholder="Search — roti, dal, paneer, केला…" autocomplete="off"></div>
+    <div class="search"><input id="qaSearch" placeholder="Search — roti, dal, paneer, banana…" autocomplete="off"></div>
+    ${mealsChips()}
     <div id="qaRes">
       ${favs.length?`<div class="sec-title" style="margin-top:4px">★ Saved</div><div class="list">${favs.slice(0,6).map(d=>dishCard(d).replace('data-act="openDish"','data-act="logDish"')).join('')}</div>`:''}
       ${rec.length?`<div class="sec-title">Recent</div><div class="list">${rec.map(d=>dishCard(d).replace('data-act="openDish"','data-act="logDish"')).join('')}</div>`:''}
@@ -447,7 +453,7 @@ function drawDishForm(){
   const EMO=['🍽️','🥞','🫓','🍚','🍛','🍲','🥗','🥘','🥣','🧀','🥬','🫘','🥔','🍆','🥕','🍄','🥪','🍞','🥛','☕','🍵','🥤','🍌','🍎','🥭','🍉','🍪','🍩','🍕','🍜','🌮','🥟'];
   openSheet(`<h2>${D.id?'Edit dish':'New dish'}</h2><div class="small muted">Add ingredients with grams — the app calculates calories, protein, carbs and fat for you.</div>
     <label class="f">Dish name (English)</label><input class="inp" data-dd="en" value="${esc(D.en)}" placeholder="e.g. Methi Paneer">
-    <label class="f">Name in Hindi (optional)</label><input class="inp hi" data-dd="hi" value="${esc(D.hi)}" placeholder="मेथी पनीर">
+    
     <label class="f">Icon</label><div class="chips">${EMO.map(e=>`<button class="chip ${D.e===e?'on':''}" data-act="ddEmo" data-e="${e}" style="font-size:20px;padding:5px 9px">${e}</button>`).join('')}</div>
     <div class="row"><div class="grow"><label class="f">Category</label><select class="inp" data-dd="cat">${FOOD_CATS.map(c=>`<option ${c===D.cat?'selected':''}>${c}</option>`).join('')}</select></div>
       <div class="grow"><label class="f">Type</label><select class="inp" data-dd="dot"><option value="g" ${D.dot==='g'?'selected':''}>🟢 Everyday</option><option value="y" ${D.dot==='y'?'selected':''}>🟡 Sometimes</option><option value="r" ${D.dot==='r'?'selected':''}>🔴 Treat</option></select></div></div>
@@ -501,7 +507,7 @@ function newIngSheet(){
 /* ---------------- TRAIN ---------------- */
 function exCard(e){
   return `<div class="item" data-act="openEx" data-id="${esc(e.id)}">${exThumb(e)}
-  <div class="txt"><div class="t1">${esc(e.en)}</div><div class="t2"><span class="hi">${esc(e.hi||'')}</span> · ${esc(e.mus||'')}</div></div>
+  <div class="txt"><div class="t1">${esc(e.en)}</div><div class="t2">${HI(e.hi)?`<span class="hi">${esc(HI(e.hi))}</span> · `:''}${esc(e.mus||'')}</div></div>
   <div class="meta exm"><b>${esc(e.dose||'')}</b>${e.rung?`<span class="pill p">${esc(e.rung.replace(/^\w+ · /,''))}</span>`:''}</div></div>`;
 }
 function vTrain(){
@@ -513,7 +519,7 @@ function vTrain(){
   <div class="hero" style="padding:16px"><div class="greet">Today's plan · ${new Date().toLocaleDateString('en-IN',{weekday:'long'})}</div><div class="big" style="font-size:20px;margin-bottom:4px">${esc(plan.title)}</div>
    <div class="small" style="position:relative;opacity:.9">Mix of gym, calisthenics, yoga, breath — if the gym stops, use the Calisthenics ladder.</div></div>
   <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity=".5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-    <input id="exSearch" placeholder="Search — squat, plank, सूर्य…" value="${esc(exQ)}" autocomplete="off"></div>
+    <input id="exSearch" placeholder="Search — squat, plank, surya…" value="${esc(exQ)}" autocomplete="off"></div>
   <div class="chips">${cats.map(c=>`<button class="chip ${c===exCat?'on':''}" data-act="exCat" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
   ${workoutCard(new Date().getDay(), true)}
   ${voiceCard()}
@@ -526,13 +532,13 @@ function exSheet(id){
   const e=exById(id); if(!e) return; const L=ytLinks('ex',e);
   openSheet(`
     ${exStage(e)}${stepStrip(e)}
-    <h2>${esc(e.en)}</h2><div class="hih">${esc(e.hi||'')}</div>
+    <h2>${esc(e.en)}</h2>${HI(e.hi)?`<div class="hih">${esc(HI(e.hi))}</div>`:''}
     <div class="row wrap" style="gap:6px;margin-bottom:12px"><span class="pill">${esc(e.cat)}</span>${e.rung?`<span class="pill p">${esc(e.rung)}</span>`:''}<span class="pill">🎯 ${esc(e.dose||'')}</span>${e.mine?'<span class="pill p">My exercise</span>':''}</div>
     <div class="small muted" style="margin-bottom:12px"><b>Works:</b> ${esc(e.mus||'')}</div>
     <button class="btn pri full" style="margin-bottom:8px" data-act="play" data-id="${esc(e.id)}">▶ Start with coach voice</button>
     <button class="btn sec full" style="margin-bottom:10px" data-act="axOne" data-id="${esc(e.id)}">✍️ Log my sets (did it already)</button>
     ${exProgressHTML(e.id)}
-    <div class="row" style="margin-bottom:16px"><a class="btn yt" href="${esc(L.hi)}" target="_blank" rel="noopener">▶ ${L.ownHi?'Your video':'Watch'} · हिंदी</a><a class="btn yt en" href="${esc(L.en)}" target="_blank" rel="noopener">▶ ${L.ownEn?'Your video':'Watch'} · English</a></div>
+    <div class="row" style="margin-bottom:16px"><a class="btn yt" href="${esc(L.hi)}" target="_blank" rel="noopener">▶ ${L.ownHi?'Your video':'Watch'} · Hindi</a><a class="btn yt en" href="${esc(L.en)}" target="_blank" rel="noopener">▶ ${L.ownEn?'Your video':'Watch'} · English</a></div>
     ${(e.steps||[]).length?`<div class="card"><h3>How to do it</h3><ol class="steps">${e.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>`:''}
     ${e.tip?`<div class="tip ${/hold|only|until|below/i.test(e.tip)?'warn':''}">💡 ${esc(e.tip)}</div>`:''}
     <details class="card" style="margin-top:14px"><summary style="font-weight:700;cursor:pointer">🎬 Add my own YouTube video</summary>
@@ -566,7 +572,7 @@ function newExSheet(src){
   openSheet(`<h2>${E.id?'Edit exercise':'New exercise'}</h2>
     <div class="fig-stage" id="nePrev">${figSVG(E.anim)}</div>
     <label class="f">Name (English)</label><input class="inp" data-ne="en" value="${esc(E.en)}" placeholder="e.g. Pike push-up">
-    <label class="f">Name (Hindi, optional)</label><input class="inp hi" data-ne="hi" value="${esc(E.hi)}">
+    
     <div class="row"><div class="grow"><label class="f">Category</label><select class="inp" data-ne="cat">${EX_CATS.map(c=>`<option ${c===E.cat?'selected':''}>${c}</option>`).join('')}</select></div>
       <div class="grow"><label class="f">Counted by</label><select class="inp" data-ne="type"><option value="reps" ${E.type==='reps'?'selected':''}>Sets × reps</option><option value="time" ${E.type==='time'?'selected':''}>Minutes</option></select></div></div>
     <label class="f">Animation (closest movement)</label><select class="inp" data-ne="anim">${Object.keys(ANIMS).map(k=>`<option ${k===E.anim?'selected':''}>${k}</option>`).join('')}</select>
@@ -637,22 +643,20 @@ function vProgress(){
     <div class="ring"><div class="rv" style="position:static;font-size:26px">${r0(avgK)}</div><div class="lab">avg kcal</div></div>
    </div></div>
   <button class="btn pri full" style="margin-bottom:14px" data-act="report">📤 Weekly report for your coach</button>
-  ${eventCard()}
   ${goalCard()}
+  <div class="card"><h3>⚖️ Weight <span class="sub">7-day trend matters, not single days</span></h3>${lineChart(wPts,'#4f8ff7','kg')}</div>
+  <div class="card"><h3>📏 Waist <span class="sub">target ${S.goal&&S.goal.waist?S.goal.waist:32.5}"</span></h3>${lineChart(waPts,'#38bdf8','in')}</div>
   ${habitsCard()}
   ${exProgressCard()}
   ${weeklyCard(todayKey(), true)}
   ${historyCard()}
-  ${journeyCard()}
-  ${badgesCard()}
-  <div class="card"><h3>⚖️ Weight <span class="sub">target ${S.goal?S.goal.weight:78} kg · log on Today tab</span></h3>${lineChart(wPts,'#ff6a3d','kg')}</div>
-  <div class="card"><h3>📏 Waist <span class="sub">target ${S.goal&&S.goal.waist?S.goal.waist:32.5}"</span></h3>${lineChart(waPts,'#7b5cff','in')}</div>
-  <div class="card"><h3>🔥 Calories — 14 days <span class="sub">avg ${r0(avgK)}</span></h3>${barChart(keys14,k=>dayTotals(k).k,st.kcal,'#ff6a3d','kcal')}</div>
+  ${eventCard()}
+  <div class="card"><h3>🔥 Calories — 14 days <span class="sub">avg ${r0(avgK)}</span></h3>${barChart(keys14,k=>dayTotals(k).k,st.kcal,'#4f8ff7','kcal')}</div>
   <div class="card"><h3>💪 Protein — 14 days <span class="sub">avg ${r0(avgP)} g</span></h3>${barChart(keys14,k=>dayTotals(k).p,st.protein,'#12b886','g')}</div>
-  <div class="card"><h3>🧗 Calisthenics ladder <span class="sub">tap your current rung</span></h3>
+  <details class="card"><summary style="font-weight:800;cursor:pointer">🏅 Badges, walking journey & ladder</summary>${journeyCard()}${badgesCard()}<div class="card"><h3>🧗 Calisthenics ladder <span class="sub">tap your current rung</span></h3>
    ${Object.entries(RUNGS).map(([p,names])=>`<div style="margin-bottom:12px"><div class="row" style="justify-content:space-between;margin-bottom:5px"><b style="text-transform:capitalize">${p}</b><span class="small muted">${esc(names[S.rungs[p]-1])}</span></div>
      <div class="rung">${names.map((n,i)=>`<button class="${S.rungs[p]>=i+1?'on':''}" data-act="rung" data-p="${p}" data-n="${i+1}" title="${esc(n)}">${i+1}</button>`).join('')}</div></div>`).join('')}
-   <div class="small muted">Move up when you can do 3 sets of the target reps with clean form.</div></div>`;
+   <div class="small muted">Move up when you can do 3 sets of the target reps with clean form.</div></div></details>`;
 }
 
 /* ---------------- ME ---------------- */
@@ -662,6 +666,10 @@ function vMe(){
   const f=(k,l,unit)=>`<div class="grow"><label class="f">${l}</label><input class="inp" inputmode="decimal" data-set="${k}" value="${esc(st[k])}" placeholder="${unit||''}"></div>`;
   return `
   ${cloudCard()}
+  ${dataCard()}
+  ${CLOUD_ON()?`<div class="card"><h3>🧠 AI coach (Riya)</h3><div class="small muted" style="margin-bottom:8px">When on, questions and unusual messages go to the AI with a short summary of today (no photos, no private space). Everyday logging stays on the phone.</div>
+    <label class="row small" style="gap:8px"><input type="checkbox" data-set-bool="ai" ${S.settings.ai!==false?'checked':''}> AI coach on</label>
+    <label class="row small" style="gap:8px;margin-top:6px"><input type="checkbox" data-set-bool="aiLabs" ${S.settings.aiLabs!==false?'checked':''}> Let the AI see my latest blood results (better food advice)</label></div>`:''}
   ${meSetupCard()}
   <div class="card"><h3>🎯 Daily targets</h3>
     <div class="row">${f('kcal','Calories')}${f('protein','Protein g')}</div>
@@ -671,7 +679,7 @@ function vMe(){
     <div class="row">${f('katoriMl','My katori (ml)','150')}${f('stepsMin','Daily minimum steps','8000')}</div>
     <div class="small muted" style="margin-top:8px">${S.plan?`Set by your plan on ${fmtD(S.plan.made)} — you can still fine-tune here.`:'Set up your starting point above to get these calculated for you.'}</div></div>
   <div class="card"><h3>🧑 My avatar <span class="sub">shown on Today</span></h3>${avatarPicker()}</div>
-  <div class="card"><h3>🔊 Coach voice</h3><div class="seg">${[['en','English'],['hi','हिंदी']].map(([k,l])=>`<button class="${(st.voice||'en')===k?'on':''}" data-act="voiceLang" data-l="${k}">${l}</button>`).join('')}</div>
+  <div class="card"><h3>🔊 Coach voice</h3><div class="seg">${[['en','English'],['hi','Hindi']].map(([k,l])=>`<button class="${(st.voice||'en')===k?'on':''}" data-act="voiceLang" data-l="${k}">${l}</button>`).join('')}</div>
     <div class="row" style="margin-top:8px">${f('rest','Rest between gym sets (s)')}<div class="grow" style="display:flex;align-items:flex-end"><button class="btn sec full" data-act="testVoice">🔈 Test voice</button></div></div>
     <div class="small muted" style="margin-top:6px">Hindi needs a Hindi voice on the phone (iPhone: Settings → Accessibility → Spoken Content → Voices → Hindi).</div></div>
   <div class="card"><h3>👣 Steps from iPhone</h3><div class="small muted" style="margin-bottom:10px">Use a free Shortcut to copy today's steps, then tap 📋 Paste on Today.</div><button class="btn sec full" data-act="shortcutHelp">How to set it up</button></div>
@@ -693,7 +701,7 @@ function vMe(){
 
 /* ---------------- onboarding ---------------- */
 function onboard(){
-  openSheet(`<div class="dish-hero"><span>🔥</span></div><h2>Welcome to Ojas</h2><div class="hih">ओजस् — vital energy</div>
+  openSheet(`<div class="dish-hero"><span>🔥</span></div><h2>Welcome to Ojas</h2><div class="hih">Vital energy</div>
     <p>Log what you eat and the app works out calories, protein, carbs and fat. Tap any dish for its recipe, or any exercise for a moving demo and YouTube videos.</p>
     <label class="f">Your weight today (kg) — used for workout calories</label><input class="inp" id="obKg" inputmode="decimal" placeholder="e.g. 99">
     <div class="tip" style="margin-top:14px">🔒 Everything stays on this phone. No account, nothing uploaded. Use <b>Me → Save backup</b> weekly.</div>
@@ -759,6 +767,12 @@ function aNext(){ if(AQ.busy || !AQ.q.length) return; const it=AQ.q.shift(); AQ.
   const end=()=>{ AQ.busy=false; it.fin&&it.fin(); aNext(); };
   AQ.el.onended=end; AQ.el.onerror=end; AQ.el.src=it.src; const pr=AQ.el.play(); if(pr&&pr.catch) pr.catch(end); }
 function stopVoice(){ try{ speechSynthesis.cancel(); }catch(e){} aStop(); }
+/* the phone's own voice is only a back-up for the recorded coach voice — always pick a FEMALE one for the female coach */
+const FEM=/veena|isha|lekha|kiyara|neerja|swara|samantha|karen|moira|tessa|serena|kate|fiona|victoria|allison|\bava\b|susan|zira|heera|female|woman/i, MAL=/rishi|daniel|alex\b|aaron|fred|arthur|gordon|oliver|thomas|prabhat|madhur|ravi|\bmale\b/i;
+function pickVoice(lang, g){ const L=v=>(v.lang||'').toLowerCase().replace('_','-'); const loc=lang==='hi'?'hi':'en-in', any=lang==='hi'?'hi':'en';
+  const want=g==='m'?MAL:FEM, avoid=g==='m'?FEM:MAL;
+  return VOICES.find(v=>L(v).startsWith(loc)&&want.test(v.name)) || VOICES.find(v=>L(v).startsWith(any)&&want.test(v.name))
+    || VOICES.find(v=>L(v).startsWith(loc)&&!avoid.test(v.name)) || VOICES.find(v=>L(v).startsWith(any)&&!avoid.test(v.name)) || null; }
 function speak(text,{lang, rate=1, flush=false, onend, g}={}){
   let done=false; const fin=()=>{ if(done) return; done=true; onend&&onend(); };
   lang = lang || (P&&P.lang) || S.settings.voice || 'en';
@@ -769,9 +783,8 @@ function speak(text,{lang, rate=1, flush=false, onend, g}={}){
   if(!('speechSynthesis' in window)){ if(onend) setTimeout(fin,60); return; }
   if(flush) aStop();
   try{ if(flush) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(String(text)); const hi=lang==='hi';
-    const L=v=>v.lang.toLowerCase().replace('_','-');
-    const v=VOICES.find(v=>L(v).startsWith(hi?'hi':'en-in'))||VOICES.find(v=>L(v).startsWith(hi?'hi':'en'));
-    if(v) u.voice=v; u.lang=hi?'hi-IN':'en-IN'; u.rate=rate; if(onend){ u.onend=fin; u.onerror=fin; } speechSynthesis.speak(u);
+    const v=pickVoice(hi?'hi':'en', g);
+    if(v) u.voice=v; u.lang=v?v.lang:(hi?'hi-IN':'en-IN'); u.rate=rate*0.95; u.pitch=(g==='m')?1:1.08; if(onend){ u.onend=fin; u.onerror=fin; } speechSynthesis.speak(u);
   }catch(e){ fin(); }
 }
 
@@ -812,7 +825,7 @@ function drawSetup(){
   const secStep = X.secs>=120 ? 60 : X.secs>=60 ? 15 : 5;
   const st=(lab,key,step,val)=>`<label class="f">${lab}</label><div class="stepper"><button data-act="ps" data-k="${key}" data-d="${-step}">−</button><div class="v">${val}</div><button data-act="ps" data-k="${key}" data-d="${step}">+</button></div>`;
   openSheet(`${exStage(e)}
-    <h2>${esc(e.en)}</h2><div class="hih">${esc(e.hi||'')}</div>
+    <h2>${esc(e.en)}</h2>${HI(e.hi)?`<div class="hih">${esc(HI(e.hi))}</div>`:''}
     ${c?`<div class="coach-line"><img class="coach-face" src="${esc(c.img)}" alt=""><div><b>${esc(c.name)} will guide you</b><div class="small muted">“${esc(c.line)}”</div></div></div>`:''}
     <div class="row">${'<div class="grow">'+st('Sets','sets',1,X.sets)+'</div>'}<div class="grow">${timed ? st('Time per set','secs',secStep,mmss(X.secs)+(X.secs<60?' s':'')) : st('Reps per set','reps',1,X.reps)}</div></div>
     ${X.sets>1?st('Rest between sets','rest',15,X.rest+' s'):''}
@@ -831,7 +844,7 @@ function plMount(){
       <button class="pl-mute" data-act="plMute" id="plMute" aria-label="Sound">🔊</button>
       ${c&&m.kind!=='video'?`<div class="coach-chip pl-chip"><img src="${esc(c.img)}" alt="">${esc(c.name)}</div>`:''}
       <div class="pl-count" id="plCount"></div><div class="pl-unit" id="plUnit"></div></div>
-    <div class="pl-info"><div class="pl-set" id="plSet"></div><h2>${esc(e.en)} <span class="hi">${esc(e.hi||'')}</span></h2>
+    <div class="pl-info"><div class="pl-set" id="plSet"></div><h2>${esc(e.en)}${HI(e.hi)?` <span class="hi">${esc(HI(e.hi))}</span>`:''}</h2>
       <div class="pl-cue" id="plCue"></div><div class="pl-bar"><i id="plBar"></i></div>
       <div class="pl-ctl"><button class="btn sec" data-act="plPause" id="plPause">⏸ Pause</button><button class="btn sec" data-act="plSkip">⏭ Skip</button><button class="btn pri" data-act="plStop">■ Finish</button></div></div>`;
   document.body.appendChild(el); mountFigs(el); requestAnimationFrame(()=>el.classList.add('show'));
@@ -1144,7 +1157,7 @@ function sessionBetween(e, what, kcal){
   const ne=exById(next.id); let left=20; const g=P.gen;
   const box=$('#player .pl-info');
   const draw=()=>{ if(box) box.innerHTML=`<div class="pl-done"><div class="small" style="opacity:.8">${esc(e.en)} ${what==='skipped'?'skipped':'done ✅ '+esc(what)}</div>
-     <h2 style="margin:8px 0 4px">Up next: ${esc(ne.en)}</h2><div class="muted">${esc(ne.hi||'')} · starts in <b id="sxLeft">${left}</b> s · ${SESSION.i+2} of ${SESSION.items.length}</div>
+     <h2 style="margin:8px 0 4px">Up next: ${esc(ne.en)}</h2><div class="muted">${HI(ne.hi)?esc(HI(ne.hi))+' · ':''}starts in <b id="sxLeft">${left}</b> s · ${SESSION.i+2} of ${SESSION.items.length}</div>
      <div class="pl-ctl" style="margin-top:14px"><button class="btn pri" data-act="sxGo">▶ Start now</button><button class="btn sec" data-act="sxSkip">⏭ Skip it</button><button class="btn sec" data-act="sxEnd">■ End</button></div></div>`; };
   draw(); plShow(left,'rest',''); speak(typeof VOICE!=='undefined'?VOICE.phrase[P.lang].nextEx:'Next exercise.', {flush:true});
   const tick=()=>{ if(!P||P.gen!==g) return; left--; const el=document.getElementById('sxLeft'); if(el) el.textContent=left; plShow(left);
@@ -1179,7 +1192,7 @@ function workoutCard(wd, big){
     <div style="font-family:var(--font-d);font-weight:800;font-size:17px">${esc(w.title)}</div><div class="small muted">${names.length} exercises · ~${w.mins} min · voice-guided</div></div>
     <button class="btn pri" data-act="sxStart" data-wd="${wd}" style="white-space:nowrap">▶ Start</button></div>
     <div style="margin-top:8px">${rows}</div><div class="small muted" style="margin-top:4px">▲ = raised because you hit every set last time. ${progWeek()<3?'Weeks 1–2: learn the form; targets start rising in week 3.':''}</div>
-    <button class="btn sec full" style="margin-top:8px" data-act="axLog" data-wd="${wd}">✍️ Log what I did (each set)</button></div>`; }
+    <div class="row" style="margin-top:8px"><button class="btn pri grow" data-act="planDone" data-wd="${wd}">✅ Did it as planned</button><button class="btn sec grow" data-act="axLog" data-wd="${wd}">✍️ Change sets</button></div></div>`; }
   return `<div class="card wk-card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px"><div><div class="small muted" style="font-weight:800">${big?"TODAY'S FULL WORKOUT":esc(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wd])}</div>
     <div style="font-family:var(--font-d);font-weight:800;font-size:${big?17:15}px">${esc(w.title)}</div><div class="small muted">${names.length} exercises · ~${w.mins} min · voice-guided</div></div>
     <button class="btn pri" data-act="sxStart" data-wd="${wd}" style="white-space:nowrap">▶ Start</button></div>
@@ -1277,17 +1290,17 @@ function labsCard(){
   const groups={}; let tally={g:0,a:0,r:0};
   for(const m of LAB_MARKERS){ const s=labSeries(m.k); if(!s.length) continue; const last=s[s.length-1], prev=s[s.length-2]; const st=labStatus(m,last[1]); tally[st]=(tally[st]||0)+1;
     const arrow=prev?(last[1]>prev[1]?'↑':last[1]<prev[1]?'↓':'→'):'';
-    (groups[m.g] ||= []).push(`<div class="lab-row" data-act="labOpen" data-k="${m.k}"><span class="dot2">${SDOT[st]}</span><span class="grow"><b>${esc(m.n)}</b><small>${fmtDY(last[0])} · healthy ${rangeText(m)}</small></span><span class="lab-v ${st}">${spark(s.map(x=>x[1]))}<b>${last[1]}</b> <small>${esc(m.u)} ${arrow}</small></span></div>`); }
-  return `<div class="card"><h3>🩸 Blood reports <span class="sub">🟢 ${tally.g} · 🟡 ${tally.a} · 🔴 ${tally.r}</span></h3>
+    (groups[m.g] ||= []).push(`<div class="lab-row" data-act="labOpen" data-k="${m.k}"><span class="dot ${st==='g'?'g':st==='a'?'y':'r'}"></span><span class="grow"><b>${esc(m.n)}</b><small><span class="lab-st ${st}">${ST_WORD[st]}</span> · range ${rangeText(m)} · ${fmtDY(last[0])}</small></span><span class="lab-v ${st}">${spark(s.map(x=>x[1]))}<b>${last[1]}</b> <small>${esc(m.u)} ${arrow}</small></span></div>`); }
+  return `<div class="card"><h3>Blood reports <span class="sub">${tally.g} within · ${tally.a} slightly out · ${tally.r} out</span></h3><div class="small muted" style="margin:-6px 0 6px">Compared with the lab's own range. Your doctor decides what it means.</div>
     ${Object.entries(groups).map(([g,rows])=>`<div class="small muted" style="font-weight:800;margin:10px 0 4px">${esc(g)}</div>${rows.join('')}`).join('')}
     <div class="row" style="margin-top:12px"><button class="btn sec grow" data-act="labAdd">+ Add a result</button><label class="btn sec grow" style="cursor:pointer">⬆ Load file<input type="file" id="healthFile" accept="application/json,.json" hidden></label></div>
     <label class="btn pri full" style="margin-top:8px;cursor:pointer">📄 Read a new lab report (PDF)<input type="file" id="repFile" data-to="health" accept="application/pdf,.pdf" hidden></label>
-    <div class="small muted" style="margin-top:8px">🟡/🔴 = talk to your doctor. This is a tracker, not a diagnosis.</div></div>`;
+    <div class="small muted" style="margin-top:8px">Colours only compare each result with the usual lab range. 🟡/🔴 = show it to your doctor — the app tracks numbers, your doctor decides what they mean.</div></div>`;
 }
 function labSheet(k){
   const m=LAB_MARKERS.find(x=>x.k===k); const s=labSeries(k);
   openSheet(`<h2>${esc(m.n)}</h2><div class="hih">Healthy: ${rangeText(m)} ${esc(m.u)}</div>
-    ${lineChart(s.map(([x,y])=>({x,y})),'#ff3d7f',m.u)}
+    ${lineChart(s.map(([x,y])=>({x,y})),'#38bdf8',m.u)}
     <table class="tbl" style="margin-top:10px">${s.slice().reverse().map(([dt,v])=>`<tr><td>${fmtDY(dt)}</td><td>${SDOT[labStatus(m,v)]} <b>${v}</b> ${esc(m.u)} <button class="x" data-act="labDel" data-k="${k}" data-d="${dt}" aria-label="Delete">×</button></td></tr>`).join('')}</table>
     <button class="btn pri full" style="margin-top:14px" data-act="labAdd" data-k="${k}">+ Add new value</button>`);
 }
@@ -1513,7 +1526,7 @@ const A = {
   theme:el=>{ S.settings.theme=el.dataset.t; save(); applyTheme(); render(); },
   export:async()=>{ try{ const ph=await PDB.all(); const blob=new Blob([JSON.stringify({...S,_photos:ph},null,1)],{type:'application/json'}); const a=document.createElement('a');
     a.href=URL.createObjectURL(blob); a.download=`ojas-backup-${todayKey()}.json`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500); toast('Backup file saved ✓'); }catch(e){ toast('Could not create the file'); } },
-  reset:()=>{ if(!resetArm){ resetArm=true; render(); setTimeout(()=>{resetArm=false; if(tab==='me') render();},4000); return; } if(typeof Cloud!=='undefined' && Cloud.user){ Cloud.logout(); try{ localStorage.removeItem('ojas.sync'); }catch(e){} SY={h:{},ph:{}}; } S=freshState(); S.settings.onboarded=true; save(); ING=ingMap(); resetArm=false; render(); toast('All data erased'); },
+  reset:()=>{ if(!resetArm){ resetArm=true; render(); setTimeout(()=>{resetArm=false; if(tab==='me') render();},4000); return; } if(CLOUD_ON() && Cloud.user){ Cloud.logout(); try{ localStorage.removeItem('ojas.sync'); }catch(e){} SY={h:{},ph:{}}; } S=freshState(); S.settings.onboarded=true; save(); ING=ingMap(); resetArm=false; render(); toast('All data erased'); },
   obDone:()=>{ const kg=parseFloat($('#obKg').value); if(kg>30){ S.settings.kg=kg; day(todayKey()).weight = day(todayKey()).weight || String(kg); } S.settings.onboarded=true; save(); closeSheet(); render(); }
 };
 document.addEventListener('click',ev=>{
@@ -1591,7 +1604,7 @@ function standHTML(p){
   return `<div class="stand">
     <div class="st-grid">
       <div class="st"><b class="${bs}">${r1(b)}</b><span>BMI · ${esc(band)}</span></div>
-      <div class="st"><b class="${whr==null?'':whr>=0.5?'r':'g'}">${whr==null?'—':r1(whr*100)/100}</b><span>Waist ÷ height · ${whr==null?'add waist':whr>=0.6?'high belly fat':whr>=0.5?'belly fat — risk':'healthy'}</span></div>
+      <div class="st"><b class="${whr==null?'':whr>=0.5?'r':'g'}">${whr==null?'—':whr.toFixed(2)}</b><span>Waist ÷ height · ${whr==null?'add waist':whr>=0.6?'high belly fat':whr>=0.5?'belly fat — risk':'healthy'}</span></div>
       <div class="st"><b>${pl.tdee.toLocaleString('en-IN')}</b><span>kcal your body burns a day</span></div>
     </div>
     ${flags.length?`<div class="small muted" style="font-weight:800;margin:12px 0 4px">Blood numbers to fix (latest)</div>${flags.slice(0,8).map(f=>`<div class="st-flag">${SDOT[f.st]} <b>${esc(f.m.n)}</b> ${f.v} ${esc(f.m.u)} <small>· healthy ${rangeText(f.m)}</small></div>`).join('')}`
@@ -1614,7 +1627,7 @@ function wzNav(){ const s=WZ.step;
 function wzBtns(next='Next →'){ return `<div class="row" style="margin-top:16px">${WZ.step>0?`<button class="btn sec" data-act="wzBack">← Back</button>`:''}<button class="btn pri grow" data-act="wzNext">${next}</button></div>`; }
 function wzIn(path, label, val, ph='', mode='decimal'){ return `<div class="grow"><label class="f">${label}</label><input class="inp" data-wz="${path}" inputmode="${mode}" value="${esc(val??'')}" placeholder="${esc(ph)}"></div>`; }
 function drawWz(){ const s=WZ.step, p=WZ.p; let h='';
-  if(s===0) h=`<div class="dish-hero"><span>🔥</span></div><h2>My starting point</h2><div class="hih">ओजस् — 2 minutes to set up your plan</div>
+  if(s===0) h=`<div class="dish-hero"><span>🔥</span></div><h2>My starting point</h2><div class="hih">2 minutes to set up your plan</div>
     <p>Tell the app where you are today and where you want to be. It works out your calories, protein, steps and weekly workouts — and adjusts when your numbers change.</p>
     <div class="tip">🔒 Everything stays on this phone. A lab report you pick is read on the phone itself — nothing is uploaded.</div>
     <button class="btn pri full" style="margin-top:16px" data-act="wzNext">Start setup →</button>
@@ -1782,14 +1795,14 @@ function bank(k=cur){ const st=S.settings, kcal=+st.kcal||2000, floor=(S.plan&&S
   return {budget, before, unlogged, today:today.k, left:budget-before-today.k, daysLeft, aim, pace, kcal, floor, wk, pAvg:pDays?pSum/pDays:0, pDays}; }
 function bankLine(k=cur){ const b=bank(k); return `Week: <b>${r0(Math.max(0,b.left)).toLocaleString('en-IN')}</b> kcal left · aim ~<b>${b.aim.toLocaleString('en-IN')}</b> today`; }
 function bankCard(k=cur){ const b=bank(k);
-  const msg = b.pace>150 ? `You are <b>${r0(b.pace)}</b> kcal over the week's pace. Don't starve — aim ~<b>${b.aim}</b> a day for the rest of the week (never below ${b.floor}).`
-    : b.pace<-300 ? `You are <b>${r0(-b.pace)}</b> kcal under pace. Good — but eat at least ~<b>${b.aim}</b> today; too little slows fat loss and burns muscle.`
-    : `On pace. Aim ~<b>${b.aim}</b> kcal today.`;
+  const msg = b.pace>150 ? `A little above plan this week — that's normal. No need to cut hard or skip meals: just eat your usual ~<b>${b.aim}</b> kcal today (never below ${b.floor}).`
+    : b.pace<-300 ? `Below plan this week. You don't need to "use up" the rest — just eat your normal ~<b>${b.kcal}</b> kcal today. Eating too little makes you hungrier later.`
+    : `On plan. Aim ~<b>${b.aim}</b> kcal today.`;
   return `<div class="card bank"><h3>🏦 Weekly calorie bank <span class="sub">${fmtD(b.wk[0])} – ${fmtD(b.wk[6])}</span></h3>
-    <div class="st-grid"><div class="st"><b>${b.budget.toLocaleString('en-IN')}</b><span>week budget</span></div><div class="st"><b>${r0(b.before+b.today).toLocaleString('en-IN')}</b><span>used so far</span></div><div class="st"><b class="${b.left<0?'r':'g'}">${r0(b.left).toLocaleString('en-IN')}</b><span>left · ${b.daysLeft} day${b.daysLeft>1?'s':''}</span></div></div>
+    <div class="st-grid"><div class="st"><b>${b.budget.toLocaleString('en-IN')}</b><span>week budget</span></div><div class="st"><b>${r0(b.before+b.today).toLocaleString('en-IN')}</b><span>used so far</span></div><div class="st"><b class="${b.left<0?'r':'g'}">${r0(b.left).toLocaleString('en-IN')}</b><span>left this week</span></div></div>
     <div class="small" style="margin-top:8px">${msg}</div>
     ${b.unlogged?`<div class="small muted" style="margin-top:4px">${b.unlogged} earlier day${b.unlogged>1?'s':''} not logged — counted at target (${b.kcal}).</div>`:''}
-    ${barChart(b.wk, kk=>dayTotals(kk).k, b.kcal, '#ff6a3d', 'kcal')}
+    ${barChart(b.wk, kk=>dayTotals(kk).k, b.kcal, '#4f8ff7', 'kcal')}
     <div class="small muted">Protein this week: avg <b>${r0(b.pAvg)} g</b> over ${b.pDays} logged day${b.pDays===1?'':'s'} (target ${S.settings.protein} g)</div></div>`; }
 
 /* ---------- week-by-week history ---------- */
@@ -1978,7 +1991,7 @@ const CHECKINS = [
   {id:'warm', from:4, to:11.5, pri:1, q:'Good morning! Did you have a glass of warm water after waking up?', opts:[['✅ Yes','yes'],['❌ Not yet','no']], done:d=>!!d.ticks.warm,
    on:{yes:d=>{ d.ticks.warm=true; d.waterMl=wml(d)+250; d.waterLog.push({ml:250,t:nowHM(),n:'Warm water'}); return 'Lovely. 250 ml added. 💧'; }, no:()=>'Have it now — one glass, slowly. It wakes up your digestion.'}},
   {id:'methi', from:4, to:11.5, pri:1, q:'Methi water or jeera water this morning?', opts:[['🌿 Methi','methi'],['🌱 Jeera','jeera'],['❌ No','no']], done:d=>!!d.ticks.methi,
-   on:{methi:d=>{ d.ticks.methi=true; const x=dishById('methi-water'); if(x) logDishQ(x,1); return 'Logged methi water ✓ — good for sugar and liver.'; },
+   on:{methi:d=>{ d.ticks.methi=true; const x=dishById('methi-water'); if(x) logDishQ(x,1); return 'Logged methi water ✓ — a good morning habit.'; },
        jeera:d=>{ d.ticks.methi=true; const x=dishById('jeera-water'); if(x) logDishQ(x,1); return 'Logged jeera water ✓ — good for gas and bloating.'; }, no:()=>'Okay. Soak 1 tsp methi tonight for tomorrow.'}},
   {id:'weight', from:4, to:12, pri:2, q:'What is your weight this morning? Just type the number, like 97.4', input:'weight', done:d=>parseFloat(d.weight)>30},
   {id:'sleep', from:4, to:13, pri:2, q:'What time did you sleep and wake up? Type like: 11 to 6', input:'sleep', done:d=>!!(d.sl&&d.sl.bed&&d.sl.wake)},
@@ -2037,10 +2050,12 @@ function answerCheckin(v, label){ const c=CH.pending; if(!c) return; const d=day
 function parseSleep(t){ const m=/(\d{1,2})(?::(\d\d))?\s*(am|pm)?\s*(?:to|-|till|until)\s*(\d{1,2})(?::(\d\d))?\s*(am|pm)?/.exec(t); if(!m) return null;
   let bh=+m[1], wh=+m[4]; if(m[3]!=='am' && bh>=7 && bh<=12) bh=bh===12?0:bh+12; if(bh===24) bh=0; if(m[6]==='pm' && wh<12) wh+=12;
   const f=(h,mm)=>String(h%24).padStart(2,'0')+':'+(mm||'00'); return {bed:f(bh,m[2]), wake:f(wh,m[5])}; }
-function handleText(raw){ const t=raw.trim(); if(!t) return; const low=t.toLowerCase(); const d=day(); const out=[];
-  meSay(t);
+function handleRules(raw, shown){ const t=raw.trim(); if(!t) return; const low=t.toLowerCase(); const d=day(); const out=[];
+  meSay(shown||t);
   if(/^\d{2,3}(\.\d+)?\s*(kg)?$/.test(low) && +low.replace(/kg/,'')>30 && +low.replace(/kg/,'')<250 && !(CH.pending&&CH.pending.input==='steps')){ d.weight=String(+low.replace(/kg/,'')); d.chatDone ||= {}; d.chatDone.weight=true; save(); render(); botSay(`⚖️ Weight ${d.weight} kg ✓ — I watch the weekly average, not single days.`); askNext(); return; }
   if(/^(hi|hello|hey|namaste|good (morning|afternoon|evening))\b/.test(low)){ const h=H(); botSay(`${h<12?'Good morning':h<17?'Good afternoon':'Good evening'}, ${esc((S.profile&&S.profile.name)||'')}! 😊`); askNext(); save(); return; }
+  { const rm=/(same|repeat|again)\b.*\b(breakfast|lunch|snack|dinner)|\b(breakfast|lunch|snack|dinner)\b.*\b(same|repeat|again|as yesterday)/.exec(low);
+    if(rm){ const slot=rm[2]||rm[3]; const L=lastMeal(slot); if(L){ addItems(L.items, slot, `${slotName(slot)} repeated`); botSay(`🔁 Logged the same ${slotName(slot).toLowerCase()} as ${niceDate(L.k).toLowerCase()}: ${mealText(L.items)}. Type "undo" if wrong.`); save(); return; } } }
   if(/^undo\b/.test(low)){ const L=CH.last; if(!L){ botSay('Nothing to undo.'); return; } L.undo(); CH.last=null; save(); render(); botSay('Undone ✓'); return; }
   if(/status|how am i|summary|progress/.test(low)){ CH.pending=null; const c=nextCheckin(); CH.pending=null; const b=bank(cur), ms=myMusts();
     botSay(`Today: ${ms.map(m=>(MUSTS[m].ok(d,cur)?'✅ ':'⬜ ')+MUSTS[m].n.replace(/^\S+\s/,'')).join(' · ')}\nWeek: ${myWeekly().map(g=>{ const s=wgStatus(g,cur); return `${g.e} ${g.unit==='steps'?r0(s.done).toLocaleString('en-IN'):r1(s.done)}/${s.tgt}`; }).join(' · ')}\nCalorie bank: ${r0(Math.max(0,b.left)).toLocaleString('en-IN')} left · aim ~${b.aim}`); save(); return; }
@@ -2082,29 +2097,29 @@ function handleText(raw){ const t=raw.trim(); if(!t) return; const low=t.toLower
   if(waterMl) foodTxt=foodTxt.replace(/\b(warm\s*)?(water|pani)\b/g,' ');
   const added=[];
   for(const part of foodTxt.split(/,|\band\b|\+|&|\bwith\b|\bthen\b|;/)){ const r=parseFoodPart(part); if(r){ const e=logDishQ(r.d, r.q); added.push(e); out.push(`${r.d.e||'🍽️'} ${r.d.en} (${r.how}) · ${r0(e.k)} kcal · ${r1(e.p)} g P`); } }
-  if(!out.length){ botSay("Sorry, I didn't catch that. Try: \"2 roti and dal\", \"1 katori khichdi\", \"weight 97.4\", \"8000 steps\", \"slept 11 to 6\", \"500 ml water\", \"kegels\", or \"status\"."); save(); return; }
+  if(!out.length){ if(aiOn()){ aiAsk(shown||t); return; } botSay(`I didn't catch that${CLOUD_ON()&&!Cloud.user?' (log in under Me to switch on my AI brain — then I understand anything)':''}. Try: "2 roti and dal", "9k steps", "weight 97.4", "slept 11 to 6", "500 ml water", "did my workout", or "status".`); save(); return; }
   if(added.length){ CH.last={undo:()=>{ const dd=day(); dd.del ||= []; added.forEach(f=>dd.del.push(f.id)); dd.food=dd.food.filter(f=>!added.includes(f)); }}; if(P && P.input==='food'){ d.chatDone ||= {}; d.chatDone[P.id]=true; } }
   save(); render();
   botSay('Logged ✓\n'+out.join('\n')+(added.length?`\nToday: ${r0(dayTotals(cur).k)} kcal · ${r0(dayTotals(cur).p)} g protein. (Type "undo" if wrong.)`:''));
   if(P && (P.input!=='food' || added.length)) askNext();
 }
 function drawChat(){ const L=chatLog(); const last=L[L.length-1];
-  const html=`<div class="chat-head"><img src="frames/coaches/riya.jpg" alt=""><div><b>${COACH_NAME} · your Ojas coach</b><small>Logs everything for you</small></div><button class="mini" data-act="chatVoice">${S.settings.chatVoice===false?'🔇':'🔊'}</button></div>
+  const html=`<div class="chat-head"><img src="frames/coaches/riya.jpg" alt=""><div><b>${COACH_NAME} · your Ojas coach</b><small>${aiOn()?'🧠 AI on · ask or tell me anything':'Logs food, water, steps, sleep, workouts'}</small></div><button class="mini" data-act="chatVoice">${S.settings.chatVoice===false?'🔇':'🔊'}</button></div>
     <div class="chat-list" id="chatList">${L.map(x=>`<div class="msg ${x.w}"><div>${esc(x.t).replace(/\n/g,'<br>')}</div><small>${esc(x.ts)}</small></div>`).join('')}</div>
-    ${last&&last.w==='b'&&last.opts?`<div class="chat-opts">${last.opts.map(([l,v])=>`<button class="chip" data-act="chatOpt" data-v="${esc(v)}" data-l="${esc(l)}">${esc(l)}</button>`).join('')}</div>`:''}
-    <form class="chat-in" id="chatForm"><input id="chatIn" class="inp" placeholder="Type — e.g. 2 roti and dal, 500 ml water" autocomplete="off" enterkeyhint="send"><button class="btn pri" type="submit">Send</button></form>
+    ${last&&last.w==='b'&&last.opts?`<div class="chat-opts">${last.opts.map(([l,v])=>`<button class="chip" data-act="chatOpt" data-v="${esc(v)}" data-l="${esc(l)}">${esc(l)}</button>`).join('')}</div>`:`<div class="chat-opts ideas">${CHAT_IDEAS.map(q=>`<button class="chip" data-act="chatOpt" data-v="__say:${esc(q)}" data-l="${esc(q)}">${esc(q)}</button>`).join('')}</div>`}
+    <form class="chat-in" id="chatForm"><input id="chatIn" class="inp" placeholder="Ask or tell me anything — e.g. 9k steps, what should I eat?" autocomplete="off" enterkeyhint="send"><button class="btn pri" type="submit">Send</button></form>
     <div class="small muted" style="text-align:center;margin-top:6px">Tip: tap the 🎤 on your iPhone keyboard to speak instead of typing.</div>`;
   openSheet(html, b=>{ const li=$('#chatList',b); li.scrollTop=li.scrollHeight; requestAnimationFrame(()=>{ li.scrollTop=li.scrollHeight; });
     $('#chatForm',b).addEventListener('submit',ev=>{ ev.preventDefault(); const v=$('#chatIn',b).value; handleText(v); drawChat(); setTimeout(()=>$('#chatIn')&&$('#chatIn').focus(),50); }); });
 }
-function openChat(){ const L=chatLog(); const lastTs=L.length?L[L.length-1].ts:''; CH.pending=null;
+function openChat(){ const L=chatLog(); const lastTs=L.length?L[L.length-1].ts:''; if(CH.confirm){ drawChat(); return; } CH.pending=null;
   const h=H(); if(!L.length || L[L.length-1].w==='m' || true){ if(!L.length) botSay(`${h<12?'Good morning':h<17?'Good afternoon':'Good evening'}${S.profile&&S.profile.name?', '+S.profile.name:''}! I'm ${COACH_NAME}. I'll check your day and log things for you.`); askNext(); }
   save(true); drawChat(); }
 function chatCard(){ const c=nextCheckin(); return `<div class="card chat-cta" data-act="chat"><img src="frames/coaches/riya.jpg" alt=""><div class="grow"><b>💬 Chat with ${COACH_NAME}</b><div class="small muted">${c?esc(c.q):'Say hi — or type what you ate, water, steps, weight…'}</div></div><span>→</span></div>`; }
 
 Object.assign(A, {
   chat:()=>openChat(),
-  chatOpt:el=>{ answerCheckin(el.dataset.v, el.dataset.l); if(sheetEl) drawChat(); },
+  chatOpt:el=>{ const v=el.dataset.v; if(v==='__cfm_yes'||v==='__cfm_no'){ meSay(el.dataset.l); applyConfirm(v==='__cfm_yes'); save(); drawChat(); return; } if(v.startsWith('__say:')){ handleText(v.slice(6)); drawChat(); return; } if(v.startsWith('__edit:')){ closeSheet(); setTimeout(()=>A.editEntry({dataset:{id:v.slice(6)}}),350); return; } answerCheckin(v, el.dataset.l); if(sheetEl) drawChat(); },
   chatVoice:()=>{ S.settings.chatVoice = S.settings.chatVoice===false; save(true); drawChat(); },
   porPick:el=>{ const p=PORTIONS.find(x=>x.id===el.dataset.id); if(!p||!logDraft) return; logDraft.mode='g'; logDraft.grams=portionG(p); drawLog(); }
 });
@@ -2211,7 +2226,8 @@ function habRow(h){ const L=habLevel(h), r7=habRate(h,7), r30=habRate(h,30); con
 function habitsCard(){ const groups=['Overall','Care','Body','Food','Move','Mind'];
   return `<div class="card"><h3>🧭 Habit levels <span class="sub">from your whole history</span></h3>
     <div class="small muted" style="margin-bottom:8px">A level moves <b>up</b> only after good weeks <b>in a row</b> (1 → 2 → 3 → 3 → 4), and <b>down</b> only after 2 weak weeks in a row (or 2 weak in 4). One good week after a missed week does not turn green. A past best level is never deleted. Not recorded ≠ missed.</div>
-    ${groups.map(g=>{ const hs=HABITS.filter(h=>h.g===g); return `<div class="hb-g">${g}</div>${hs.map(habRow).join('')}`; }).join('')}
+    ${HABITS.filter(h=>h.g==='Overall').map(habRow).join('')}
+    <details><summary class="small" style="font-weight:800;cursor:pointer;margin-top:8px">All ${HABITS.length-1} habits ▾</summary>${groups.filter(g=>g!=='Overall').map(g=>{ const hs=HABITS.filter(h=>h.g===g); return `<div class="hb-g">${g}</div>${hs.map(habRow).join('')}`; }).join('')}</details>
     <div class="small muted" style="margin-top:8px">Week colours: <span style="color:#12b886">●</span> good <span style="color:#f2c94c">●</span> mixed (level holds) <span style="color:#e03131">●</span> weak ○ not recorded</div></div>`; }
 function habSheet(id){ const h=habById(id); if(!h) return; const L=habLevel(h); const rs=[7,14,30].map(n=>habRate(h,n));
   const fx=(S.fix||{})[id];
@@ -2325,7 +2341,7 @@ function morningInfo(k=todayKey()){ const w=(typeof WORKOUTS!=='undefined')?WORK
   const left=ev&&ev.date?daysBetween(k,ev.date):null; const o=habLevel(habById('allmusts'));
   return {name:(S.profile&&S.profile.name)||'', date:parseKey(k).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'}), q:quoteOf(k), w:w?w.title:'', ev:ev&&left>=0?`${left} days to ${ev.name||'the function'}`:'', lv:`${o.L.e} ${o.L.n}`, slept:sleepHours((peekDay(k)||{}).sl)}; }
 function drawMorningCanvas(){ const m=morningInfo(); const c=document.createElement('canvas'); c.width=1080; c.height=1920; const x=c.getContext('2d');
-  const g=x.createLinearGradient(0,0,1080,1920); g.addColorStop(0,'#ffb347'); g.addColorStop(.45,'#ff6a3d'); g.addColorStop(1,'#7b5cff'); x.fillStyle=g; x.fillRect(0,0,1080,1920);
+  const g=x.createLinearGradient(0,0,1080,1920); g.addColorStop(0,'#38bdf8'); g.addColorStop(.45,'#2563eb'); g.addColorStop(1,'#1e3a8a'); x.fillStyle=g; x.fillRect(0,0,1080,1920);
   x.fillStyle='rgba(255,255,255,.12)'; x.beginPath(); x.arc(900,260,300,0,7); x.fill(); x.beginPath(); x.arc(120,1700,360,0,7); x.fill();
   x.fillStyle='#fff'; x.textAlign='center'; x.font='600 54px system-ui,-apple-system,sans-serif'; x.fillText('☀️ Good morning'+(m.name?', '+m.name:''),540,330);
   x.font='400 40px system-ui,-apple-system,sans-serif'; x.fillText(m.date,540,400);
@@ -2333,7 +2349,7 @@ function drawMorningCanvas(){ const m=morningInfo(); const c=document.createElem
   let y=wrap('“'+m.q[0]+'”',760,68,92); x.font='italic 400 40px Georgia,serif'; x.fillText('— '+m.q[1],540,y+30);
   x.font='600 42px system-ui,-apple-system,sans-serif'; let yy=1380;
   if(m.w){ x.fillText('Today: '+m.w,540,yy); yy+=70; } if(m.ev){ x.fillText('🎉 '+m.ev,540,yy); yy+=70; }
-  x.font='800 64px system-ui,-apple-system,sans-serif'; x.fillText('OJAS',540,1800); x.font='400 30px system-ui,-apple-system,sans-serif'; x.fillText('ओजस् · vital energy',540,1846);
+  x.font='800 64px system-ui,-apple-system,sans-serif'; x.fillText('OJAS',540,1800); x.font='400 30px system-ui,-apple-system,sans-serif'; x.fillText('vital energy',540,1846);
   return c; }
 function morningSheet(){ const m=morningInfo();
   openSheet(`<h2>☀️ Good morning${m.name?', '+esc(m.name):''}</h2><div class="hih">${esc(m.date)}</div>
@@ -2531,6 +2547,7 @@ Object.assign(A, {
   quietSet:el=>{ S.settings[el.dataset.k]=el.value; save(true); }
 });
 let confirmWipe=false;
+document.addEventListener('change',ev=>{ const t=ev.target; if(t.dataset && t.dataset.setBool){ S.settings[t.dataset.setBool]=t.checked; save(true); toast('Saved ✓'); } });
 document.addEventListener('input',ev=>{ const t=ev.target; if(t.dataset && t.dataset.mind){ const d=day(); d.mind ||= {}; d.mind[t.dataset.mind]=t.value.trim(); save(true); } });
 document.addEventListener('change',ev=>{ const t=ev.target; if(t.dataset && t.dataset.quiet){ if(/^\d\d:\d\d$/.test(t.value)){ S.settings[t.dataset.quiet]=t.value; save(true); toast('Quiet hours saved ✓'); } } });
 ['pointerdown','keydown'].forEach(e=>document.addEventListener(e,()=>{ if(VAULT.key) vTouch(); },{passive:true}));
@@ -2540,7 +2557,7 @@ document.addEventListener('change',ev=>{ const t=ev.target; if(t.dataset && t.da
    (works offline); every change is copied online within seconds; on a
    new phone / laptop you log in and everything comes back.
    ===================================================================== */
-const HAS_CLOUD = typeof Cloud!=='undefined';
+const HAS_CLOUD = CLOUD_ON();
 const SYK = 'ojas.sync';
 let SY = (()=>{ try{ return JSON.parse(localStorage.getItem(SYK)||'null') || {}; }catch(e){ return {}; } })();
 SY.h ||= {}; SY.ph ||= {};
@@ -2708,6 +2725,8 @@ function tgtText(t, e){ if(!t) return ''; const kg=t.kind==='load'?(t.kg?` @ ${t
   return `${t.sets} × ${t.reps}${/each/i.test(e&&e.dose||'')?' each side':''}${kg}`; }
 function progAfter(id, entry, it){ const e=exById(id); if(!e || !entry.target || !entry.log) return ''; const K=kindOf(e); if(K.k==='fixed') return '';
   const t=entry.target, L=entry.log, s=pst(id), wk=weekStart(todayKey());
+  if(entry.pain){ s.painN=(s.painN||0)+1; if(s.painN>=2){ if(K.k==='load'){ if((s.r||0)>0) s.r--; else if(s.kg) s.kg=Math.max(0,Math.round((s.kg-(K.inc||2.5))*10)/10); } else s.step=Math.max(0,(s.step||0)-1); s.painN=0; return '↘ Pain twice in a row — I eased the target one step. '+painAdvice(id); } return painAdvice(id); }
+  s.painN=0;
   const per = x => t.timed ? (+x.s||0) : (+x.r||0), need = t.timed ? t.secs*0.95 : t.reps;
   if(K.k==='load'){ const kgs=L.map(x=>+x.kg||0).filter(Boolean); if(kgs.length) s.kg=Math.max(...kgs); }
   const hit = L.length>=t.sets && L.slice(0,t.sets).every(x=>per(x)>=need) && (K.k!=='load' || !t.kg || L.every(x=>(+x.kg||0)>=t.kg));
@@ -2761,14 +2780,14 @@ function drawActuals(fromSession){ const X=AX;
       return `<div class="card ax-ex ${x.skip?'skip':''}"><div class="row" style="justify-content:space-between;gap:8px"><div><b>${esc(e.en)}</b><div class="small muted">Target: <b>${esc(tgtText(t,e))}</b>${t.up?' <span class="up">▲ raised</span>':''}</div></div>
         <button class="mini" data-act="axAll" data-i="${i}">✓ all</button></div>
         ${x.sets.map((s,j)=>`<div class="ax-row"><span class="small">Set ${j+1}</span><button class="mini" data-act="axStep" data-i="${i}" data-j="${j}" data-d="${-(t.timed?(t.secs>=120?60:5):1)}">−</button><input class="inp ax-in" inputmode="numeric" data-ax="${i}:${j}:v" value="${esc(s.v)}"><span class="small muted">${unit}</span><button class="mini" data-act="axStep" data-i="${i}" data-j="${j}" data-d="${t.timed?(t.secs>=120?60:5):1}">+</button>${t.kind==='load'?`<input class="inp ax-kg" inputmode="decimal" placeholder="kg" data-ax="${i}:${j}:kg" value="${esc(s.kg)}"><span class="small muted">kg</span>`:''}<button class="mini ax-ok ${s.ok?'on':''}" data-act="axOk" data-i="${i}" data-j="${j}">${s.ok?'✓':'○'}</button></div>`).join('')}
-        <div class="row" style="gap:6px;margin-top:6px"><button class="mini" data-act="axAdd" data-i="${i}">+ set</button><button class="mini" data-act="axSkip" data-i="${i}">${x.skip?'Undo skip':'Skipped'}</button></div></div>`; }).join('')}
+        <div class="row" style="gap:6px;margin-top:6px"><button class="mini" data-act="axAdd" data-i="${i}">+ set</button><button class="mini" data-act="axSkip" data-i="${i}">${x.skip?'Undo skip':'Skipped'}</button><button class="mini ax-pain ${x.pain?'on':''}" data-act="axPain" data-i="${i}">🤕 ${x.pain?'Pain noted':'Pain?'}</button></div></div>`; }).join('')}
     <button class="btn pri full" data-act="axSave">Save my sets</button>`, b=>{
       $$('[data-ax]',b).forEach(el=>el.addEventListener('input',()=>{ const [i,j,f]=el.dataset.ax.split(':'); const s=AX.items[+i].sets[+j]; s[f]=el.value.trim(); if(f==='v') s.ok=true; const okb=el.closest('.ax-row').querySelector('.ax-ok'); okb.classList.add('on'); okb.textContent='✓'; })); }); }
 function saveActuals(){ const d=day(); const msgs=[]; let n=0;
   for(const x of AX.items){ if(x.skip) continue; const done=x.sets.filter(s=>s.ok && +s.v>0); if(!done.length) continue; const e=exById(x.id), t=x.t;
     const log=done.map(s=>t.timed?{s:+s.v}:{r:+s.v, ...(t.kind==='load'&&+s.kg?{kg:+s.kg}:{})});
     const total=log.reduce((a,l)=>a+(t.timed?l.s:l.r),0); const mins=t.timed?Math.round(total/60*10)/10:0; const reps=t.timed?0:Math.round(total/log.length);
-    const entry={id:uid(), t:cur===todayKey()?nowHM():'07:00', ex:x.id, name:e.en, cat:e.cat, sets:t.timed?0:log.length, reps, mins, kcal:r0(exKcal(e, log.length, reps, mins)), plan:AX.wd, target:{sets:t.sets, reps:t.reps, secs:t.secs, kg:t.kg||null, timed:t.timed, kind:t.kind}, log};
+    const entry={id:uid(), pain:!!x.pain, t:cur===todayKey()?nowHM():'07:00', ex:x.id, name:e.en, cat:e.cat, sets:t.timed?0:log.length, reps, mins, kcal:r0(exKcal(e, log.length, reps, mins)), plan:AX.wd, target:{sets:t.sets, reps:t.reps, secs:t.secs, kg:t.kg||null, timed:t.timed, kind:t.kind}, log};
     const i=(d.ex||[]).findIndex(z=>z.ex===x.id && (z.plan===AX.wd || z.guided)); if(i>=0){ entry.id=d.ex[i].id; d.ex[i]=entry; } else d.ex.push(entry);
     if(x.id==='kegel') d.kegel=Math.max(d.kegel||0, Math.min(3,log.length));
     if(e.cat==='Breath') d.ticks.breath=true; if(e.cat==='Meditation') d.ticks.med=true;
@@ -2811,11 +2830,12 @@ function chatSets(low){ let m, e, log=null;
 /* =====================================================================
    v2.1 — simple bright Today view, one-button login, auto-loaded profile
    ===================================================================== */
-function simpleToday(d){ const loggedIn = typeof Cloud!=='undefined' && Cloud.user;
+function simpleToday(d){ const loggedIn = !CLOUD_ON() || Cloud.user;
   return `
   ${!loggedIn?`<div class="card big-cta" data-act="cloudLogin"><div class="bc-ic">☁️</div><div class="grow"><b>Save my data online</b><div class="small">1 minute · your profile, goals and reports load automatically</div></div><span>→</span></div>`:''}
   ${S.profile?'':setupPrompt()}
   ${reviewCard()}
+  ${repeatCard()}
   ${chatCard()}
   <div class="quick-row">
     <button class="qbtn" data-act="quickAdd"><span>🍽️</span>Add food</button>
@@ -2834,22 +2854,557 @@ Object.assign(A, {
   todaySimple:()=>{ S.ui ||= {}; S.ui.todayAll=false; save(true); render(); window.scrollTo({top:0}); }
 });
 (function(){ const st=document.createElement('style'); st.textContent=`
-:root[data-theme="light"]{ --bg:#fff8f1; --surface:#ffffff; --surface-2:#fff3e8; --border:#f3e3d3; --accent-weak:#ffeee4; }
 .big-cta{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#e0f2ff,#fff1e6);border:1px solid #cfe6fb;cursor:pointer}
 .big-cta .bc-ic{font-size:30px}.big-cta b{font-family:var(--font-d);font-size:16px}
 .quick-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
 .qbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);font-size:12px;font-weight:700;cursor:pointer}
 .qbtn span{font-size:22px}
-.login-hero{font-size:46px;text-align:center;margin:4px 0 2px}`; document.head.appendChild(st); })();
+.login-hero{font-size:46px;text-align:center;margin:4px 0 2px}
+.chat-opts.ideas{flex-wrap:wrap}.chat-opts.ideas .chip{font-size:12px;opacity:.9}`; document.head.appendChild(st); })();
+
+
+/* =====================================================================
+   v2.3 — faster logging (repeat & saved meals, "did it as planned"),
+          pain flag, calmer calorie words, safer health wording,
+          "where my data lives", leaner Progress, compact Today header
+   ===================================================================== */
+const MEAL_SLOTS = [['breakfast','Breakfast'],['lunch','Lunch'],['snack','Snack'],['dinner','Dinner']];
+function lastMeal(slot, before=cur){ for(let i=1;i<=14;i++){ const k=addDays(before,-i), d=peekDay(k); const items=(d&&d.food||[]).filter(f=>f.slot===slot); if(items.length) return {k, items}; } return null; }
+function mealText(items){ return items.map(f=>`${f.qty!==1?r1(f.qty)+'× ':''}${f.name}`).join(', '); }
+function addItems(items, slot, label){ const d=day(); const t=cur===todayKey()?nowHM():{breakfast:'08:30',lunch:'13:00',snack:'16:30',dinner:'19:30'}[slot]||'13:00';
+  const added=items.map(f=>({...f, id:uid(), t, slot})); d.food.push(...added); save(); render();
+  const k=added.reduce((s,f)=>s+(+f.k||0),0), p=added.reduce((s,f)=>s+(+f.p||0),0);
+  toast(`${label} ✓ ${r0(k)} kcal · ${r0(p)} g protein`); CH.last={undo:()=>{ const dd=day(); dd.del ||= []; added.forEach(f=>dd.del.push(f.id)); dd.food=dd.food.filter(f=>!added.includes(f)); }}; return added; }
+function slotNow(){ const h=H(); return h<11?'breakfast':h<15.5?'lunch':h<18.5?'snack':'dinner'; }
+function repeatCard(){ if(cur!==todayKey()) return ''; const slot=slotNow(), d=day(); if(d.food.some(f=>f.slot===slot)) return ''; const L=lastMeal(slot); const saved=(S.meals||[]).filter(m=>m.slot===slot).slice(0,2);
+  if(!L && !saved.length) return '';
+  return `<div class="card rep-card"><div class="small muted" style="font-weight:800">${esc(slotName(slot)).toUpperCase()} · ONE TAP</div>
+    ${L?`<button class="rep-btn" data-act="repMeal" data-s="${slot}"><span>🔁</span><span class="grow"><b>Same as ${esc(niceDate(L.k).toLowerCase()==='yesterday'?'yesterday':fmtD(L.k))}</b><small>${esc(mealText(L.items)).slice(0,90)}</small></span></button>`:''}
+    ${saved.map(m=>`<button class="rep-btn" data-act="savedMeal" data-id="${esc(m.id)}"><span>⭐</span><span class="grow"><b>${esc(m.name)}</b><small>${esc(mealText(m.items)).slice(0,90)}</small></span></button>`).join('')}</div>`; }
+function mealsChips(){ const out=[]; for(const [s,n] of MEAL_SLOTS){ const L=lastMeal(s, addDays(todayKey(),1)===cur?todayKey():cur); if(L) out.push(`<button class="chip" data-act="repMeal" data-s="${s}">🔁 ${n} like ${niceDate(L.k).toLowerCase()==='yesterday'?'yesterday':fmtD(L.k)}</button>`); }
+  for(const m of (S.meals||[]).slice(0,6)) out.push(`<button class="chip" data-act="savedMeal" data-id="${esc(m.id)}">⭐ ${esc(m.name)}</button>`);
+  return out.length?`<div class="sec-title" style="margin-top:4px">One tap</div><div class="chips" style="flex-wrap:wrap">${out.join('')}</div>`:''; }
+function saveMealSheet(slot){ const d=day(); const items=d.food.filter(f=>f.slot===slot); if(!items.length) return toast('Nothing logged for this meal yet');
+  openSheet(`<h2>⭐ Save this ${esc(slotName(slot).toLowerCase())}</h2><div class="hih">${esc(mealText(items))}</div>
+    <label class="f">Name</label><input class="inp" id="mealName" value="${esc(slotName(slot)+' — usual')}" maxlength="40">
+    <button class="btn pri full" style="margin-top:10px" data-act="mealSave" data-s="${slot}">Save — log it later with one tap</button>`); }
+
+/* workout: one tap for the whole plan, and a pain flag */
+function buildAX(wd){ const w=workoutFor(wd); if(!w) return null; const d=day();
+  return {wd, title:w.title, items:w.items.filter(it=>exById(it.id)).map(it=>{ const e=exById(it.id), t=progTarget(it, cur), ex=(d.ex||[]).filter(x=>x.ex===it.id && (x.plan===wd || x.guided)).pop();
+    const sets=[...Array(t.sets)].map((_,i)=>{ const l=ex&&ex.log&&ex.log[i]; return {v: l?(t.timed?+l.s:+l.r):(t.timed?t.secs:t.reps), kg: l&&l.kg!=null?l.kg:(t.kg||''), ok: !!(l || (ex && !ex.log && i<(ex.sets||1)))}; });
+    return {id:it.id, it, t, sets, skip:false, pain:!!(ex&&ex.pain)}; })}; }
+const EASIER = {'pushup':'incline-pushup','incline-pushup':'wall-pushup','knee-pushup':'wall-pushup','plank':'knee-pushup','bw-squat':'glute-bridge','split-squat':'bw-squat','step-up':'bw-squat'};
+function painAdvice(id){ const e=exById(EASIER[id]); return `Pain noted — the target will NOT go up. ${e?`Next time try the easier version: ${e.en}. `:'Next time do fewer reps or a lighter weight. '}Sharp pain, chest pain, dizziness or breathlessness → stop and see a doctor.`; }
+
+/* where my data lives + delete online data */
+function dataCard(){ const on=CLOUD_ON()&&Cloud.user;
+  return `<div class="card"><h3>📍 Where my data lives</h3>
+    <div class="dl-row"><b>📱 On this phone</b><span class="small muted">Always. Works without internet. Deleting the Ojas icon deletes this copy.</span></div>
+    <div class="dl-row"><b>☁️ Online</b><span class="small muted">${on?`Yes — copied to your private database (${esc(Cloud.user.email)}). Only your login can open it.`:'No — you are not logged in. Log in above to keep a safe copy.'} ${on&&!SY.noPhotos?'Body & skin photos: included.':on?'Photos: not included.':''}</span></div>
+    <div class="dl-row"><b>🔒 Private space</b><span class="small muted">Scrambled with your passcode before it is saved. Nobody else can read it — not even the server.</span></div>
+    <div class="dl-row"><b>📤 Shared</b><span class="small muted">Only what you share yourself. The morning card shows a quote, today's workout and the countdown — never weight, reports or photos.</span></div>
+    ${on?`<button class="btn ghost full" style="color:var(--crit);margin-top:6px" data-act="cloudWipe">${wipeArm?'Tap again: delete ALL my online data':'Delete my online data'}</button>`:''}</div>`; }
+let wipeArm=false;
+async function cloudWipe(){ const uid=Cloud.user.uid;
+  await Cloud.rest(`ojas_days?user_id=eq.${uid}`, {method:'DELETE', headers:{Prefer:'return=minimal'}});
+  await Cloud.rest(`ojas_state?user_id=eq.${uid}`, {method:'DELETE', headers:{Prefer:'return=minimal'}});
+  try{ const l=await Cloud.photoList(); if(l&&l.length) await Cloud.photoDel(l.map(o=>o.name)); }catch(e){}
+}
+
+/* styles */
+(function(){ const st=document.createElement('style'); st.textContent=`
+.rep-card{padding:12px 14px}.rep-btn{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface-2);border-radius:14px;padding:10px 12px;margin-top:8px;cursor:pointer}
+.rep-btn>span:first-child{font-size:22px}.rep-btn b{display:block}.rep-btn small{color:var(--muted)}
+.hero-sm{padding:16px 18px}.hero-sm .hs-row{display:flex;gap:14px;position:relative;margin-top:10px}.hero-sm .hs{flex:1}.hero-sm .hs b{font-size:22px;font-family:var(--font-d)}.hero-sm .hs small{opacity:.9}
+.hero-sm .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.35);margin-top:6px;overflow:hidden}.hero-sm .bar i{display:block;height:100%;background:#fff;border-radius:99px}
+.dl-row{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--border)}
+.ax-pain.on{background:#e03131;color:#fff}`; document.head.appendChild(st); })();
+
+/* compact header for the simple Today */
+function heroSimple(){ const t=dayTotals(), st=S.settings; const h=new Date().getHours(); const greet = cur!==todayKey() ? niceDate(cur) : h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const pk=Math.min(1,t.k/(st.kcal||1)), pp=Math.min(1,t.p/(st.protein||1));
+  return `<section class="hero hero-sm"><button class="hero-av" data-act="tab" data-tab="me" aria-label="Avatar">${avatarHTML()}</button>
+    <div class="greet">${greet}${S.profile&&S.profile.name?', '+esc(String(S.profile.name).split(' ')[0]):''}</div>
+    <div class="hs-row"><div class="hs"><b>${r0(t.k).toLocaleString('en-IN')}</b><small> / ${(+st.kcal).toLocaleString('en-IN')} kcal</small><div class="bar"><i style="width:${r0(pk*100)}%"></i></div></div>
+    <div class="hs"><b>${r0(t.p)}</b><small> / ${st.protein} g protein</small><div class="bar"><i style="width:${r0(pp*100)}%"></i></div></div></div></section>`; }
+
+Object.assign(A, {
+  repMeal:el=>{ const s=el.dataset.s; const L=lastMeal(s, addDays(cur,0)); if(!L) return toast('No earlier meal found'); closeSheet(); addItems(L.items, s, `${slotName(s)} repeated`); },
+  savedMeal:el=>{ const m=(S.meals||[]).find(x=>x.id===el.dataset.id); if(!m) return; closeSheet(); addItems(m.items, m.slot, m.name); },
+  mealSaveOpen:el=>saveMealSheet(el.dataset.s),
+  mealSave:el=>{ const s=el.dataset.s, items=day().food.filter(f=>f.slot===s).map(({id,t,...f})=>f); S.meals ||= []; S.meals.unshift({id:uid(), name:($('#mealName').value||slotName(s)).trim(), slot:s, items}); S.meals=S.meals.slice(0,12); save(); closeSheet(); toast('⭐ Saved — it now shows as a one-tap button'); },
+  planDone:el=>{ AX=buildAX(+el.dataset.wd); if(!AX) return; AX.items.forEach(x=>x.sets.forEach(s=>s.ok=true)); saveActuals(); },
+  axPain:el=>{ const x=AX.items[+el.dataset.i]; x.pain=!x.pain; drawActuals(); },
+  cloudWipe:async()=>{ if(!wipeArm){ wipeArm=true; render(); setTimeout(()=>{ wipeArm=false; if(tab==='me') render(); },5000); return; } wipeArm=false;
+    try{ await cloudWipe(); Cloud.logout(); SY={h:{},ph:{}}; syKeep(); render(); toast('Online data deleted. This phone still has its copy.'); }catch(e){ toast('Could not delete: '+e.message); } }
+});
+
+/* =====================================================================
+   v2.4 — Riya becomes an AI coach that can run the whole app from chat.
+   1) a smarter rule engine handles everyday logging instantly (free, offline)
+      and ASKS when a number is missing ("log my steps" → "How many steps?")
+   2) anything else goes to the AI (OpenAI via the private Supabase function),
+      which reads a short summary of today and presses the app's buttons
+   ===================================================================== */
+const aiOn = () => S.settings.ai!==false && CLOUD_ON() && !!Cloud.user && navigator.onLine;
+function normChat(low){ let s=' '+low+' ';
+  s=s.replace(/(\d+(?:\.\d+)?)\s?k\b/g,(m,n)=>String(Math.round(parseFloat(n)*1000)));            // 9k → 9000
+  s=s.replace(/\b(\d{1,3}),(\d{3})\b/g,'$1$2');                                                     // 9,000 → 9000
+  s=s.replace(/\bsteps?\s*(?:count|today|is|are|=|:|-)*\s*(\d{3,6})\b/g,'$1 steps');               // "steps 9000" → "9000 steps"
+  s=s.replace(/\b(walked|walk(?:ed)? today|did)\s+(\d{3,6})\b(?!\s*(?:m\b|meter|metre|ml|kcal|cal))/g,'$2 steps');   // "walked 9000"
+  s=s.replace(/\bi(?: am|'m| weigh| weighed)\s+(\d{2,3}(?:\.\d+)?)\s*(kg|kgs)?\b/g,'weight $1');   // "i am 97.2"
+  s=s.replace(/\bmy weight (?:is|was)\s+(\d{2,3}(?:\.\d+)?)/g,'weight $1');
+  s=s.replace(/\b(a|one|1)\s+bottle\s+(of\s+)?water\b/g,'1000 ml water').replace(/\b(\d)\s+bottles?\s+(of\s+)?water\b/g,(m,n)=>`${n*1000} ml water`);
+  return s.trim(); }
+function askFor(kind){ const Q={steps:'How many steps today? Type the number — like 8500 or 8.5k.', weight:'What is your weight this morning? Just the number, like 97.4', sleep:'What time did you sleep and wake up? Type like: 11 to 6', waist:'What is your waist in inches? Like 40.5'};
+  CH.pending={id:kind, input:kind==='waist'?'waist':kind, q:Q[kind], from:0, to:24, done:()=>false}; botSay(Q[kind]); }
+const ASK_RE = {steps:/^(?:(?:please\s+)?(?:log|add|update|enter|record|save|put|note)\s+(?:my\s+|today'?s?\s+)?steps?|steps?|my steps|log steps?)\s*(?:please|today|for today)?\s*$/,
+  weight:/^(?:(?:log|add|update|enter|record|save)\s+(?:my\s+)?weight|weight|my weight)\s*(?:please|today)?\s*$/,
+  sleep:/^(?:(?:log|add|update|enter|record|save)\s+(?:my\s+)?sleep|sleep|my sleep)\s*(?:please|today)?\s*$/,
+  waist:/^(?:(?:log|add|update|enter|record|save)\s+(?:my\s+)?waist|waist)\s*$/};
+const QUESTION_RE = /\?\s*$|^(what|why|how|should|shall|can|could|which|when|where|is|are|do|does|did|will|would|suggest|plan|recommend|kya|kaise|kitna|kitne|kab|batao|bataiye|tell me|help|explain|give me|make me|create|change|set my|increase|decrease|reduce|remind|motivate|i feel|i am feeling|i'm feeling|feeling)\b/;
+function aiContext(){ const t=todayKey(), d=day(t), tt=dayTotals(t), st=S.settings, b=bank(t), g=S.goal||{}, p=S.profile||{};
+  const L=[]; const now=new Date();
+  L.push(`Now: ${now.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'})} ${nowHM()}. Quiet hours ${quietFrom()}-${quietTo()}.`);
+  L.push(`Person: ${p.name||'user'}, ${p.age||''}y, ${p.heightCm||''} cm, vegetarian. Goal ${g.startWeight||''}→${g.weight||''} kg, waist ${g.startWaist||''}→${g.waist||''} in.${g.event?` Event "${g.event.name}" on ${g.event.date} target ${g.event.weight} kg.`:''} Plan week ${progWeek()}${easyWeek()?' (easy week)':''}.`);
+  L.push(`Daily targets: ${st.kcal} kcal, protein ${st.protein} g, carbs ${st.carbs} g, fat ${st.fat} g, water ${r1((+st.waterMl||3000)/1000)} L, steps ${st.steps} (minimum ${stepsMin()}).`);
+  L.push(`Today so far: ${r0(tt.k)} kcal, protein ${r0(tt.p)} g, carbs ${r0(tt.c)} g, fat ${r0(tt.f)} g, water ${r1(wml(d)/1000)} L, steps ${stepsOf(d.steps)||0}, sleep ${sleepHours(d.sl)!=null?r1(sleepHours(d.sl))+' h':'not logged'}, weight ${d.weight||'not logged'}.`);
+  const bySlot={}; for(const f of d.food) (bySlot[f.slot] ||= []).push(`${f.qty!==1?r1(f.qty)+'x ':''}${f.name} (${r0(f.k)} kcal)`);
+  L.push('Food today: '+(Object.keys(bySlot).length?Object.entries(bySlot).map(([s,a])=>`${s}: ${a.join(', ')}`).join(' | '):'nothing yet'));
+  L.push('Daily musts: '+myMusts().map(m=>`${MUSTS[m].n.replace(/^\S+\s/,'')} ${MUSTS[m].ok(d,t)?'done':'pending'} (${MUSTS[m].v(d,t)})`).join('; '));
+  const w=typeof WORKOUTS!=='undefined'?WORKOUTS[now.getDay()]:null; if(w) L.push(`Today's workout "${w.title}": `+w.items.filter(it=>exById(it.id)).map(it=>`${exById(it.id).en} ${tgtText(progTarget(it),exById(it.id))}`).join(', ')+`. Logged: ${(d.ex||[]).map(x=>x.name).join(', ')||'nothing yet'}.`);
+  L.push(`Week: ${r0(Math.max(0,b.left))} kcal left in weekly plan, aim ~${b.aim} today. Treats ${treatsIn(weekKeys(t)).length}/${TREAT_BUDGET()}. Weekly goals: `+myWeekly().map(gg=>{ const s=wgStatus(gg,t); return `${gg.name} ${r0(s.done)}/${s.tgt}`; }).join('; '));
+  const ws=lastNDays(14).map(k=>parseFloat((peekDay(k)||{}).weight)).filter(x=>x>30); if(ws.length) L.push(`Weight last 14 days: ${ws.join(', ')}.`);
+  const al=habAlerts(); if(al.length) L.push('Habits needing attention: '+al.map(a=>`${a.h.n} (${a.why})`).join('; '));
+  const pl=MEAL_PLANS[mealPlanIdx(t)]; if(pl) L.push(`Chosen meal plan "${pl.name}": `+pl.items.map(([s,id,q])=>{ const x=dishById(id); return x?`${s}: ${q!==1?q+'x ':''}${x.en}`:''; }).filter(Boolean).join('; '));
+  if(S.settings.aiLabs!==false){ const keys=['hba1c','fbs','alt','ast','tg','ldl','hdl','uric','b12','vitd','tsh','egfr']; const lab=keys.map(k=>{ const s=labSeries(k); return s.length?`${k} ${s[s.length-1][1]} (${s[s.length-1][0]})`:''; }).filter(Boolean); if(lab.length) L.push('Latest blood results: '+lab.join(', ')+'. (Coach only — never diagnose.)'); }
+  return L.join('\n'); }
+function aiHistory(){ return chatLog().slice(-9,-1).filter(x=>x.t && !/^…/.test(x.t)).map(x=>({role:x.w==='b'?'assistant':'user', content:x.t})); }
+const HABIT_MAP = {warm_water:['tick','warm'], no_sugar:['tick','nosugar'], dinner_by_8:['tick','dinner'], walk_after_meals:['tick','walk'], yoga:['tick','breath'], meditation:['tick','med'], sunlight:['tick','sun'], methi_water:['tick','methi'],
+  brush_am:['care','teeth-am'], brush_pm:['care','teeth-pm'], tongue_scraper:['care','tongue'], face_wash_am:['care','face-am'], face_wash_pm:['care','face-pm'], sunscreen:['care','spf'], shower:['care','shower']};
+function findExercise(name){ const n=String(name||'').toLowerCase(); const w=exByWords(n); if(w) return w; const all=allEx(); return all.find(e=>e.en.toLowerCase()===n) || all.find(e=>e.en.toLowerCase().includes(n)) || all.find(e=>n.includes(e.en.toLowerCase().split(' (')[0])) || null; }
+function execAction(a, undoList){ const d=day(), A0=a.args||{}; const say=[];
+  switch(a.name){
+    case 'log_food': { for(const it of (A0.items||[])){ const q=+it.qty||1; const txt=`${q} ${it.unit||''} ${it.name}`.replace(/\s+/g,' ').trim(); let r=parseFoodPart(txt.toLowerCase()) || parseFoodPart(String(it.name).toLowerCase());
+        const GEN=new Set(['veg','vegetable','mixed','mix','curry','sabzi','dish','with','plain','bowl','plate','katori','fresh','home','made','spicy','masala','fry','light']);
+        const words=String(it.name).toLowerCase().split(/[^a-z]+/).filter(w=>w.length>=3&&!GEN.has(w));
+        if(r && words.length){ const hay=(r.d.en+' '+(r.d.id||'')).toLowerCase(); if(!words.some(w=>hay.includes(w.replace(/s$/,'')))) r=null; }
+        let e=null; if(r && !(it.kcal && r.how && /serving/.test(r.how) && false)){ e=logDishQ(r.d, r.q); }
+        else if(it.kcal){ e={id:uid(), t:nowHM(), slot:slotFor(nowHM()), name:it.name, e:'🍽️', unit:`${q} ${it.unit||'serving'}`, qty:1, k:r1(+it.kcal), p:r1(+it.protein||0), c:r1(+it.carbs||0), f:r1(+it.fat||0), via:'ai', est:true}; d.food.push(e); }
+        if(e){ if(A0.meal) e.slot=A0.meal; undoList.push(()=>{ const dd=day(); dd.del ||= []; dd.del.push(e.id); dd.food=dd.food.filter(f=>f!==e); }); say.push(`${e.e||'🍽️'} ${e.name}${e.est?' (estimate)':''} · ${r0(e.k)} kcal · ${r1(e.p)} g P`); }
+        else say.push(`❓ couldn't find "${it.name}" — tell me roughly what it was`); } break; }
+    case 'add_water': { const ml=Math.max(0,Math.min(5000,+A0.ml||0)); if(ml){ d.waterMl=wml(d)+ml; d.waterLog.push({ml,t:nowHM(),n:'chat'}); undoList.push(()=>{ const dd=day(); dd.waterMl=Math.max(0,wml(dd)-ml); }); say.push(`💧 +${fmtMl(ml)} (total ${fmtMl(wml(d))})`); } break; }
+    case 'set_steps': { const n=Math.max(0,Math.round(+A0.steps||0)); const old=d.steps; d.steps=String(A0.mode==='add'?stepsOf(d.steps)+n:n); undoList.push(()=>{ day().steps=old; }); say.push(`👣 ${(+d.steps).toLocaleString('en-IN')} steps`); break; }
+    case 'set_weight': { const kg=+A0.kg; if(kg>30&&kg<250){ const old=d.weight; d.weight=String(r1(kg)); undoList.push(()=>{ day().weight=old; }); say.push(`⚖️ ${d.weight} kg`); } break; }
+    case 'set_waist': { const v=+A0.inches; if(v>20&&v<70){ const old=d.waist; d.waist=String(v); undoList.push(()=>{ day().waist=old; }); say.push(`📏 waist ${v}"`); } break; }
+    case 'set_sleep': { if(/^\d{1,2}:\d\d$/.test(A0.bed||'')&&/^\d{1,2}:\d\d$/.test(A0.wake||'')){ const old=JSON.stringify(d.sl||{}); d.sl ||= {}; d.sl.bed=A0.bed.padStart(5,'0'); d.sl.wake=A0.wake.padStart(5,'0'); if(A0.snoring!=null) d.sl.snore=String(A0.snoring); const h=sleepHours(d.sl); if(h!=null) d.sleep=String(h); undoList.push(()=>{ day().sl=JSON.parse(old); }); say.push(`😴 ${d.sl.bed} → ${d.sl.wake} = ${r1(h)} h`); } break; }
+    case 'log_exercise': { const e=findExercise(A0.exercise); if(!e){ say.push(`❓ couldn't find the exercise "${A0.exercise}"`); break; } const it=findPlanItem(e.id)||{id:e.id}; const t=progTarget(it,cur); const timed=e.type==='time';
+      let log=(A0.sets||[]).map(s=>timed?{s:+s.seconds||(+s.reps||0)}:{r:+s.reps||0, ...(+s.kg?{kg:+s.kg}:{})}).filter(l=>(l.s||l.r)>0);
+      if(!log.length && A0.minutes) log=[{s:Math.round(+A0.minutes*60)}];
+      if(!log.length) log=[...Array(t.sets)].map(()=>timed?{s:t.secs}:{r:t.reps});
+      const tot=log.reduce((x,l)=>x+(l.s||l.r||0),0), mins=timed?r1(tot/60):0, reps=timed?0:Math.round(tot/log.length);
+      const en={id:uid(), pain:!!A0.pain, t:nowHM(), ex:e.id, name:e.en, cat:e.cat, sets:timed?0:log.length, reps, mins, kcal:r0(exKcal(e,log.length,reps,mins)), target:{sets:t.sets,reps:t.reps,secs:t.secs,kg:t.kg||null,timed:t.timed,kind:t.kind}, log, via:'ai'};
+      d.ex.push(en); if(e.cat==='Breath'||e.cat==='Yoga') d.ticks.breath=true; const m=progAfter(e.id,en,it); undoList.push(()=>{ const dd=day(); dd.del ||= []; dd.del.push(en.id); dd.ex=dd.ex.filter(x=>x!==en); });
+      say.push(`💪 ${e.en}: ${entryText(en,e)}${m?` — ${m}`:''}`); break; }
+    case 'workout_done_as_planned': { const wd=new Date().getDay(); AX=buildAX(wd); if(AX){ AX.items.forEach(x=>x.sets.forEach(s=>s.ok=true)); const n0=d.ex.length; saveActuals(); closeSheet(); say.push(`🏋️ Whole workout logged as planned (${day().ex.length-n0||AX.items.length} exercises)`); } break; }
+    case 'tick_habit': { const m=HABIT_MAP[A0.habit]; if(m){ if(m[0]==='tick') d.ticks[m[1]]=!!A0.done; else { d.care ||= {}; d.care[m[1]]=!!A0.done; } say.push(`${A0.done?'✅':'⬜'} ${String(A0.habit).replace(/_/g,' ')}`); } break; }
+    case 'add_kegel': { const n=Math.max(1,Math.min(3,+A0.sets||1)); d.kegel=Math.min(3,(d.kegel||0)+n); say.push(`🔥 Kegels ${d.kegel}/3`); break; }
+    case 'repeat_meal': { const L=lastMeal(A0.meal); if(L){ const added=addItems(L.items, A0.meal, `${slotName(A0.meal)} repeated`); undoList.push(()=>{ const dd=day(); dd.food=dd.food.filter(f=>!added.includes(f)); }); say.push(`🔁 ${slotName(A0.meal)} like ${niceDate(L.k).toLowerCase()}: ${mealText(L.items)}`); } else say.push('No earlier meal found to repeat.'); break; }
+    case 'set_target': { const map={calories:'kcal', protein:'protein', water_litres:'waterMl', steps:'steps', steps_minimum:'stepsMin'}; const k=map[A0.target]; let v=+A0.value; if(!k||!(v>0)) break;
+      if(k==='waterMl') v=Math.round(v*1000); if(k==='kcal' && v<((S.profile&&S.profile.sex==='f')?1200:1500)){ say.push(`⚠️ I won't set calories below ${(S.profile&&S.profile.sex==='f')?1200:1500} — too low to be safe.`); break; }
+      CH.confirm={k, v, label:`${A0.target.replace(/_/g,' ')} → ${A0.target==='water_litres'?r1(v/1000)+' L':v}`}; say.push(`❔ Change ${CH.confirm.label}? Tap Yes to confirm.`); break; }
+    case 'journal': { d.mind ||= {}; const k={intention:'int', went_well:'j1', learned:'j2', tomorrow:'j3'}[A0.kind]; if(k){ d.mind[k]=String(A0.text||'').slice(0,140); say.push(`📓 saved`); } break; }
+    case 'open_screen': { const s=A0.screen; setTimeout(()=>{ closeSheet(); if(['today','food','train','progress','health','me'].includes(s)){ tab=s; render(); window.scrollTo({top:0}); } else if(s==='day_review') reviewSheet(reviewKey()); else if(s==='morning_card') morningSheet(); else if(s==='log_sets') actualsSheet(new Date().getDay(), false); }, 900); say.push(`📲 opening ${s.replace('_',' ')}…`); break; }
+    case 'start_workout': { setTimeout(()=>{ closeSheet(); sessionStart(A0.which==='minimum_15'?7:new Date().getDay()); }, 900); say.push('▶ starting your workout…'); break; }
+    case 'undo_last': { const L=CH.last; if(L){ L.undo(); CH.last=null; say.push('↩️ undone'); } else say.push('Nothing to undo.'); break; }
+  }
+  return say; }
+let AI_BUSY=false;
+async function aiAsk(text){ if(AI_BUSY) return; AI_BUSY=true; botSay('… Riya is thinking'); if(sheetEl) drawChat();
+  let res=null, err='';
+  try{ res=await Cloud.fn('ojas-ai', {message:text, context:aiContext(), history:aiHistory()}); }catch(e){ err=e.status===401?'Please log in again (Me → Online backup) to use the AI.':'I could not reach the AI just now — check internet. Simple logging still works.'; }
+  const L=chatLog(); if(L.length && /^… Riya is thinking/.test(L[L.length-1].t)) L.pop();
+  if(err){ botSay(err); AI_BUSY=false; save(); if(sheetEl) drawChat(); return; }
+  const undoList=[]; const lines=[]; for(const a of (res.actions||[])){ try{ lines.push(...execAction(a, undoList)); }catch(e){ lines.push('⚠️ could not do: '+a.name); } }
+  if(undoList.length) CH.last={undo:()=>undoList.reverse().forEach(f=>f())};
+  save(); render();
+  const reply=(res.reply||'').trim(); const body=[reply, lines.length?(reply?'\n':'')+lines.join('\n'):''].filter(Boolean).join('\n');
+  const ests=day().food.filter(f=>f.est && f.via==='ai').slice(-2);
+  const opts = CH.confirm ? [['✅ Yes','__cfm_yes'],['✖ No','__cfm_no']] : undoList.length ? [['↩ Undo','__say:undo'], ...ests.filter(f=>lines.some(l=>l.includes(f.name))).map(f=>['✏️ Edit '+f.name.slice(0,18),'__edit:'+f.id])] : null;
+  botSay((lines.length&&!CH.confirm?'Saved:\n':'')+(body || 'Done ✓'), opts); if(opts && CH.confirm) CH.pending={id:'confirm', on:{}, done:()=>false};
+  if(lines.length && !CH.confirm) chatLog()[chatLog().length-1].t += `\nToday: ${r0(dayTotals(cur).k)} kcal · ${r0(dayTotals(cur).p)} g protein.${lines.some(l=>/estimate/.test(l))?' "Estimate" = Riya guessed the numbers — tap Edit to fix.':''}`;
+  AI_BUSY=false; save(); if(sheetEl) drawChat(); }
+const CHAT_IDEAS = ['What should I eat now?','How is my week going?','Plan my dinner','Log 9k steps','Did my workout as planned','Why is my weight not dropping?'];
+
+function applyConfirm(yes){ const c=CH.confirm; CH.confirm=null; CH.pending=null; if(!c) return; if(yes){ S.settings[c.k]=c.v; save(); render(); botSay(`✅ Changed ${c.label}.`); } else botSay('Okay, kept as it was.'); }
+function handleText(raw){ const t=String(raw||'').trim(); if(!t) return; const low=t.toLowerCase(); const norm=normChat(low); const d=day();
+  if(CH.confirm && /^(yes|y|ok|okay|haan|ha|confirm|sure|done)\b/.test(low)){ meSay(t); applyConfirm(true); save(); return; }
+  if(CH.confirm && /^(no|n|nahi|cancel)\b/.test(low)){ meSay(t); applyConfirm(false); save(); return; }
+  if(CH.pending && CH.pending.input==='waist'){ const m=/(\d{2}(?:\.\d+)?)/.exec(norm); if(m && +m[1]>20 && +m[1]<70){ meSay(t); d.waist=m[1]; CH.pending=null; save(); render(); botSay(`📏 Waist ${m[1]}" ✓`); askNext(); return; } }
+  for(const k of Object.keys(ASK_RE)){ if(ASK_RE[k].test(norm.replace(/[.!]+$/,''))){ meSay(t); askFor(k); save(); return; } }
+  let m=/\bslept\s*(?:for\s*)?(\d{1,2}(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\b/.exec(norm);
+  if(m && !/\bto\b|-/.test(norm.replace(m[0],''))){ meSay(t); const h=+m[1]; const wakeH=H()<11&&cur===todayKey()?H():6.5; const bedH=(wakeH-h+24)%24; const f=x=>String(Math.floor(x)).padStart(2,'0')+':'+String(Math.round((x%1)*60)).padStart(2,'0');
+    d.sl ||= {}; d.sl.bed=f(bedH); d.sl.wake=f(wakeH); d.sleep=String(h); d.chatDone ||= {}; d.chatDone.sleep=true; save(); render(); botSay(`😴 Sleep ${h} h ✓ (about ${d.sl.bed} → ${d.sl.wake}).`); askNext(); return; }
+  if(QUESTION_RE.test(low) && !/^(status|summary)\b/.test(low) && aiOn()){ meSay(t); aiAsk(t); save(); return; }
+  handleRules(norm, t); }
+
+/* ---------- DEMO mode (?demo=1): sample person, sample data, nothing online, separate storage ---------- */
+function demoSetup(){
+  const bar=document.createElement('div'); bar.textContent='DEMO · sample data only (not a real person) · nothing is saved online'; bar.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99;background:#1b1a22;color:#fff;font:600 11px system-ui;text-align:center;padding:4px 6px calc(4px + env(safe-area-inset-bottom))';
+  document.body.appendChild(bar);
+  if(S.demoSeeded) return;
+  const t=todayKey(); const f=freshState(); S={...f, demoSeeded:true, lastVersion:VERSION};
+  Object.assign(S.settings,{onboarded:true, theme:'dark', kcal:1800, protein:95, carbs:200, fat:55, steps:10000, stepsMin:8000, waterMl:3000, katoriMl:150, heightCm:172, kg:''});
+  S.profile={name:'Arjun (demo)', age:34, sex:'m', heightCm:172, weight:92, waist:39, activity:'mod', diet:'veg', date:addDays(t,-24)};
+  S.goal={weight:76, waist:33, pace:0.7, startWeight:92, startDate:addDays(t,-24), startWaist:39, event:{name:'Wedding', date:addDays(t,30), weight:86, waist:36}, sprint:{from:addDays(t,-24), to:addDays(t,32), weight:85, waist:35.5}};
+  S.musts=['steps','water','protein','kcal','sleep','dinner','yoga','kegel'];
+  S.labs={hba1c:[[addDays(t,-60),6.1],[addDays(t,-10),5.8]], alt:[[addDays(t,-60),64],[addDays(t,-10),52]], tg:[[addDays(t,-60),190],[addDays(t,-10),162]], vitd:[[addDays(t,-60),18],[addDays(t,-10),31]], b12:[[addDays(t,-10),210]], uric:[[addDays(t,-10),7.2]], tsh:[[addDays(t,-10),3.1]]};
+  S.ui={mcShown:t, bright21:true, ocean25:true}; ING=ingMap();
+  const R=(a,b)=>a+Math.random()*(b-a), pick=a=>a[Math.floor(Math.random()*a.length)];
+  const plan=MEAL_PLANS[3]||MEAL_PLANS[0];
+  for(let i=24;i>=1;i--){ const k=addDays(t,-i); const d=day(k); const good=Math.random()<0.78;
+    for(const [slot,id,q] of plan.items){ if(!good && Math.random()<0.25) continue; const x=dishById(id); if(!x) continue; const m=dishMacros(x);
+      d.food.push({id:uid(), t:{early:'06:40',breakfast:'08:40',mid:'11:00',lunch:'13:10',snack:'16:40',dinner:'19:40',late:'21:30'}[slot]||'13:00', slot, dish:id, name:x.en, e:x.e, unit:x.unit, qty:q, k:r1(m.k*q), p:r1(m.p*q), c:r1(m.c*q), f:r1(m.f*q)}); }
+    if(!good && Math.random()<0.5){ const tr=dishById('samosa'); if(tr){ const m=dishMacros(tr); d.food.push({id:uid(), t:'17:30', slot:'snack', dish:'samosa', name:tr.en, e:tr.e, unit:tr.unit, qty:1, k:m.k, p:m.p, c:m.c, f:m.f}); } }
+    d.waterMl=Math.round(R(good?2600:1500, good?3400:2600)/250)*250; d.steps=String(Math.round(R(good?8500:4000, good?12500:8000)));
+    const bh=good?pick(['22:30','22:45','23:00']):pick(['23:30','00:15']); d.sl={bed:bh, wake:pick(['06:15','06:30','06:45']), snore:String(pick([0,1,1,2]))}; d.sleep=String(r1(sleepHours(d.sl)));
+    d.weight=String(r1(92-(24-i)*0.11+R(-0.4,0.4))); if(i%14===0) d.waist=String(r1(39-(24-i)*0.04));
+    d.ticks={warm:good, dinner:good, walk:Math.random()<0.7, nosugar:good, breath:Math.random()<0.75, methi:Math.random()<0.6};
+    d.care={'teeth-am':true, 'teeth-pm':Math.random()<(i>12?0.5:0.9), tongue:Math.random()<0.7, 'face-am':Math.random()<0.85, spf:Math.random()<0.6, shower:true};
+    d.kegel=good?3:Math.floor(R(0,3));
+    const wd=parseKey(k).getDay(), w=WORKOUTS[wd]; if(w && (good||Math.random()<0.4)){ for(const it of w.items){ const e=exById(it.id); if(!e) continue; const tg=progTarget(it,k);
+        const log=[...Array(tg.sets)].map(()=>tg.timed?{s:tg.secs}:{r:Math.max(1,tg.reps-(Math.random()<0.2?2:0)), ...(tg.kind==='load'?{kg:20+Math.floor((24-i)/7)*2.5}:{})});
+        const tot=log.reduce((a,l)=>a+(l.s||l.r||0),0); const en={id:uid(), t:'07:00', ex:e.id, name:e.en, cat:e.cat, sets:tg.timed?0:log.length, reps:tg.timed?0:Math.round(tot/log.length), mins:tg.timed?r1(tot/60):0, kcal:r0(exKcal(e,log.length,tg.reps,tg.timed?tot/60:0)), plan:wd, target:{sets:tg.sets,reps:tg.reps,secs:tg.secs,kg:tg.kg||null,timed:tg.timed,kind:tg.kind}, log};
+        d.ex.push(en); progAfter(e.id, en, it); } }
+  }
+  save(true); render();
+}
 
 /* ---------- safety copy on every version change (kept in the phone's bigger store, last 3 versions) ---------- */
-(function(){ try{ const prev=S.lastVersion; if(prev===VERSION) return; const snap=JSON.stringify(S);
+(function(){ try{ if(DEMO) return; const prev=S.lastVersion; if(prev===VERSION) return; const snap=JSON.stringify(S);
   if(prev && Object.keys(S.days).length){ const r=indexedDB.open('ojas-safety',1); r.onupgradeneeded=()=>r.result.createObjectStore('s',{keyPath:'v'});
     r.onsuccess=()=>{ try{ const db=r.result, st=db.transaction('s','readwrite').objectStore('s'); st.put({v:prev, at:new Date().toISOString(), data:snap});
       const all=st.getAllKeys(); all.onsuccess=()=>{ const ks=all.result.sort(); ks.slice(0,-3).forEach(k=>st.delete(k)); }; }catch(e){} }; }
   S.lastVersion=VERSION; save(true); }catch(e){} })();
+/* =====================================================================
+   v2.5 — "Ocean Calm" look + one design system
+   One set of rules for every screen: same spacing (4/8/12/16/24), same
+   corners (cards 16, inner boxes 12, buttons 12, chips round), same title
+   sizes, solid blue buttons, docked tab bar, chat button in the header,
+   calmer Today (one "next thing" card, shorter workout list).
+   ===================================================================== */
+const ICON = {
+  food:'<path d="M4 13h16a8 8 0 0 1-16 0z"/><path d="M8 9c0-2 2-2 2-4M12 9c0-2 2-2 2-4M16 9c0-2 2-2 2-4"/>',
+  water:'<path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/>',
+  bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
+  chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
+  play:'<path d="M7 5v14l11-7z"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16v4z"/>',
+  down:'<path d="M6 9l6 6 6-6"/>',
+};
+const ico = (n, sz=20) => `<svg class="ic" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[n]||''}</svg>`;
+
+/* Today: workout card with only the first 4 moves, the rest behind "Show all" */
+function todayWorkout(wd){
+  const w=workoutFor(wd); if(!w) return '';
+  const items=w.items.filter(it=>exById(it.id)); const open=S.ui?.wkOpen;
+  const rows=(open?items:items.slice(0,4)).map(it=>{ const e=exById(it.id), t=progTarget(it); return `<div class="wk-tg" data-act="openEx" data-id="${esc(e.id)}"><span>${esc(S.settings.hindi?e.en:e.en.replace(/\s*\([^)]*\)\s*$/,''))}</span><b>${esc(tgtText(t,e))}${t.up?' <span class="up">▲</span>':''}</b></div>`; }).join('');
+  const more=items.length-4;
+  return `<section class="card">
+    <div class="ds-head"><div><div class="ds-eyebrow">Today's workout · Week ${progWeek()}${easyWeek()?' · easy week':''}</div><h3 class="ds-title">${esc(w.title)}</h3><div class="ds-sub">${items.length} exercises · about ${w.mins} min</div></div>
+      <button class="btn pri sm" data-act="sxStart" data-wd="${wd}">${ico('play',16)}Start</button></div>
+    <div class="ds-list">${rows}</div>
+    ${more>0?`<button class="ds-more" data-act="wkMore">${open?'Show less':`Show all ${items.length}`}</button>`:''}
+    <div class="ds-actions"><button class="btn pri" data-act="planDone" data-wd="${wd}">${ico('check',18)}Did it as planned</button><button class="btn sec" data-act="axLog" data-wd="${wd}">${ico('edit',18)}Change sets</button></div>
+  </section>`;
+}
+
+/* Today (simple view): one clear order, max one "next thing" card */
+simpleToday = function(d){ const loggedIn = !CLOUD_ON() || Cloud.user;
+  const next = reviewCard() || repeatCard() || chatCard();
+  return `
+  ${!loggedIn?`<div class="card big-cta" data-act="cloudLogin"><div class="grow"><b>Save my data online</b><div class="small muted">1 minute · your profile, goals and reports load automatically</div></div><span class="ds-chev">›</span></div>`:''}
+  ${S.profile?'':setupPrompt()}
+  <div class="quick-row">
+    <button class="qbtn" data-act="quickAdd">${ico('food',22)}<span>Add food</span></button>
+    <button class="qbtn" data-act="addWater" data-ml="250" data-n="Glass">${ico('water',22)}<span>+1 glass</span></button>
+    <button class="qbtn" data-act="sxStart" data-wd="7">${ico('bolt',22)}<span>15-min</span></button>
+    <button class="qbtn" data-act="chat">${ico('chat',22)}<span>Ask Riya</span></button>
+  </div>
+  ${next?`<div class="ds-label">Next</div>${next}`:''}
+  <div class="ds-label">Today</div>
+  ${mustsCard()}
+  ${todayWorkout(parseKey(cur).getDay())}
+  ${mealPlanCard(d)}
+  <button class="ds-link" data-act="todayAll">Show everything — habits, water, sleep, care, food log ${ico('down',16)}</button>
+  <p class="ds-foot">Ojas is a coach, not a doctor.</p>`; };
+Object.assign(A, { wkMore:()=>{ S.ui ||= {}; S.ui.wkOpen=!S.ui.wkOpen; save(true); render(); } });
+
+/* tidy-up after every screen and sheet: titles without leading emoji, wide tables scroll inside their card */
+const LEAD_EMO = /^[\s\p{Extended_Pictographic}‍️⃣\u{1F3FB}-\u{1F3FF}]+(?=\S)/u;
+function dsTidy(root){ if(!root) return;
+  root.querySelectorAll('.card h3, .sheet h2, .sec-title, .btn:not(.keep-emo), .chat-cta b, .card > .row > b, .ds-title, .must b, .mp-card > summary > b, .tick, .dl-row b, details > summary, .card > b').forEach(el=>{
+    const n=[...el.childNodes].find(x=>x.nodeType===3 && x.textContent.trim()); if(!n) return;
+    if(el.firstChild!==n && el.firstChild.nodeType!==3) return;            // starts with an icon element – leave it
+    const t=n.textContent.replace(LEAD_EMO,''); if(t.trim()) n.textContent=t; });
+  root.querySelectorAll('table.tbl').forEach(t=>{ if(!t.parentElement.classList.contains('tbl-wrap')){ const w=document.createElement('div'); w.className='tbl-wrap'; t.replaceWith(w); w.appendChild(t); } });
+}
+render = (orig => function(){ orig.apply(this, arguments); dsTidy($('#main')); })(render);
+new MutationObserver(()=>{ const r=document.getElementById('sheetRoot'); if(r && !r.dataset.tidying){ r.dataset.tidying='1'; requestAnimationFrame(()=>{ dsTidy(r); delete r.dataset.tidying; }); } })
+  .observe(document.getElementById('sheetRoot'), {childList:true, subtree:true});
+
+(function(){ const st=document.createElement('style'); st.textContent=`
+/* ---------- base ---------- */
+body{font-size:15px;letter-spacing:-.005em}
+main{padding:8px 16px 24px}
+html.demo .hdr{padding-top:calc(26px + env(safe-area-inset-top))}
+.shell{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+.small{font-size:13px}
+/* ---------- header ---------- */
+.hdr{gap:8px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid transparent}
+.hdr .datenav{margin-left:auto}
+.logo{width:32px;height:32px;border-radius:10px;box-shadow:none}
+.brand h1{font-size:19px}
+.hdr-chat{width:38px;height:38px;flex:none;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--accent);display:grid;place-items:center;cursor:pointer}
+.hdr-chat svg{width:20px;height:20px}
+#chatFab{display:none!important}
+/* ---------- cards: one style everywhere ---------- */
+.card{border-radius:16px;padding:16px;margin:0 0 12px;box-shadow:var(--shadow);border:1px solid var(--border);background:var(--surface)}
+.card h3{font-size:16px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em}
+.card h3 .sub{font-size:13px;font-weight:600}
+.card.wk-card{border:1px solid var(--border)}
+.sec-title,.ds-label{font-family:var(--font-b);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:24px 2px 8px}
+.ds-label:first-child{margin-top:8px}
+.ds-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.ds-eyebrow{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ds-title{font-family:var(--font-d);font-size:17px!important;font-weight:700;margin:2px 0 2px!important;display:block!important}
+.ds-sub{font-size:13px;color:var(--muted)}
+.ds-list .wk-tg:first-child{border-top:0}
+.ds-more{border:0;background:none;color:var(--accent);font:inherit;font-weight:700;font-size:13px;padding:10px 0 0;cursor:pointer}
+.ds-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.ds-actions .btn{white-space:nowrap;padding:12px 8px;font-size:14px;gap:6px}
+.rep-btn>span:first-child{display:none}
+.mp-card>summary{flex-direction:column;align-items:flex-start!important;gap:2px}.mp-card>summary::-webkit-details-marker{display:none}
+.tick{gap:10px;min-width:0;overflow-wrap:anywhere}.ticks{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ds-link{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1px solid var(--border);background:transparent;color:var(--fg);border-radius:12px;padding:13px;font:inherit;font-weight:600;font-size:14px;cursor:pointer;margin:12px 0 0}
+.ds-foot{text-align:center;color:var(--muted);font-size:12px;margin:16px 0 0}
+.ds-chev{font-size:22px;color:var(--muted)}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
+/* ---------- hero ---------- */
+.hero{border-radius:20px;box-shadow:none;padding:18px}
+.hero::before,.hero::after{display:none}
+.hero-sm .hs b{font-size:24px}
+/* ---------- buttons ---------- */
+.btn{border-radius:12px;min-height:46px;padding:12px 16px;font-size:14.5px;font-weight:700;gap:8px}
+.btn.sm{min-height:38px;padding:8px 14px;font-size:13.5px;border-radius:10px}
+.btn.pri{background:var(--accent);color:#fff;box-shadow:none}
+.btn.sec{background:var(--surface-2);border:1px solid var(--border)}
+.btn.ghost{min-height:0}
+.btn .ic{flex:none}
+.mini{border-radius:8px}
+.cele-card .btn.pri{background:#fff;color:#1e40af}
+/* ---------- quick actions ---------- */
+.quick-row{grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 4px}
+.qbtn{gap:6px;padding:14px 4px 12px;border-radius:14px;box-shadow:var(--shadow);background:var(--surface);border:1px solid var(--border);color:var(--fg);font-size:12.5px;font-weight:600}
+.qbtn .ic{color:var(--accent)}
+.qbtn span{font-size:12.5px}
+/* ---------- inner boxes / rows ---------- */
+.must-grid,.ticks{gap:8px}
+.must{border-radius:12px;border:1px solid var(--border);background:var(--surface-2);padding:10px 10px 10px 38px}
+.must.ok{background:color-mix(in srgb,var(--good) 12%,var(--surface));border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.must .mi{border-radius:50%}
+.tick{border-radius:12px}
+.item{border-radius:14px;box-shadow:var(--shadow)}
+.emo{border-radius:12px}
+.rep-card{padding:16px}.rep-btn{border-radius:12px;margin-top:8px}
+.rep-btn>span:first-child{font-size:18px}
+.big-cta{display:flex;align-items:center;gap:12px;background:var(--accent-weak);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.chat-cta img{width:40px;height:40px}
+.setup-cta,.ev-card{background:var(--accent-weak)}
+.chips{gap:6px}.chip{padding:7px 12px;font-size:13px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{border-radius:12px}.seg button{border-radius:9px}
+.inp{border-radius:12px;background:var(--surface-2)}
+.search{border-radius:12px;box-shadow:none}
+.tip{border-radius:12px}
+.sheet{border-radius:22px 22px 0 0}
+.sheet h2{font-size:20px}
+.msg.m{background:var(--accent)}
+.rung button.on{background:var(--accent)}
+.pbar i{background:var(--accent)}
+.wk-tg{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border);border-bottom:0;font-size:14px;cursor:pointer}
+.wk-tg b{font-weight:700;white-space:nowrap}
+/* ---------- tab bar: docked, evenly spaced ---------- */
+.tabs{left:0;right:0;transform:none;bottom:0;width:100%;max-width:none;border-radius:0;border:0;border-top:1px solid var(--border);
+  padding:6px max(8px,calc(50% - 260px)) calc(6px + env(safe-area-inset-bottom));box-shadow:none;background:color-mix(in srgb,var(--surface) 92%,transparent)}
+.tabs button{padding:6px 0 4px;border-radius:10px;font-size:10.5px;font-weight:600;gap:3px}
+.tabs button svg{width:24px;height:24px}
+.tabs button.on{background:none;color:var(--accent)}
+.tabs button.on svg{transform:none}
+/* ---------- the one floating button ---------- */
+.fab{width:54px;height:54px;border-radius:16px;background:var(--accent);box-shadow:0 8px 20px rgba(37,99,235,.35);right:max(16px,calc(50% - 244px));bottom:calc(76px + env(safe-area-inset-bottom))}
+.fab svg{width:26px;height:26px}
+`; document.head.appendChild(st); })();
+
+/* =====================================================================
+   v2.6 — fixes from the ChatGPT design review (all 15 approved)
+   ===================================================================== */
+/* 1. readable durations: under 1 min → "45 sec", else "32 min" / "1 min 30 sec" */
+function fmtDur(s){ s=Math.round(+s||0); if(s<60) return `${s} sec`; const m=Math.floor(s/60), r=s%60; return r?`${m} min ${r} sec`:`${m} min`; }
+tgtText = (orig => function(t, e){ if(t && t.timed) return `${t.sets>1?t.sets+' × ':''}${fmtDur(t.secs)}`; return orig(t, e); })(tgtText);
+
+/* 9. English names only (old name kept in .alt so chat and history still match) */
+const EN_NAME = {'tadasana':'Mountain Pose','vrikshasana':'Tree Pose','trikonasana':'Triangle Pose','virabhadrasana':'Warrior Pose','bhujangasana':'Cobra Pose',
+  'setu-bandhasana':'Bridge Pose','marjaryasana':'Cat-Cow','balasana':"Child's Pose",'naukasana':'Boat Pose','paschimottanasana':'Seated Forward Fold',
+  'malasana':'Deep Squat','bhramari':'Humming Bee Breath','trataka':'Candle Gazing','inverted-row':'Inverted Row'};
+function applyEnglishNames(){ if(S.settings.hindi) return; for(const e of EXERCISES){ const n=EN_NAME[e.id]; if(n && e.en!==n){ e.alt=e.en; e.en=n; } } }
+applyEnglishNames();
+findExercise = (orig => function(name){ const r=orig(name); if(r) return r; const n=String(name||'').toLowerCase(); return allEx().find(e=>e.alt && e.alt.toLowerCase().includes(n.split(' (')[0])) || null; })(findExercise);
+const exName = (id, fallback) => { const e=exById(id); return e ? e.en : (fallback||id); };
+
+/* 6. Today: daily musts — the 4 still to do first, "See all" for the rest */
+function mustsTop(k=cur){ const d=day(k), ms=myMusts(); const rows=ms.map(m=>({m, M:MUSTS[m], ok:MUSTS[m].ok(d,k)})); const done=rows.filter(r=>r.ok).length;
+  const ordered=[...rows.filter(r=>!r.ok), ...rows.filter(r=>r.ok)]; const all=S.ui?.mustsAll; const show=all?ordered:ordered.slice(0,4);
+  return `<section class="card"><div class="ds-head" style="margin-bottom:10px"><h3 class="ds-title" style="margin:0!important">Daily musts</h3><span class="ds-count">${done} of ${ms.length} done</span></div>
+    <div class="must-grid">${show.map(({m,M,ok})=>`<button class="must ${ok?'ok':''}" ${M.tick?`data-act="mustTick" data-k="${M.tick}"`:'data-act="mustHelp" data-k="'+m+'"'}><span class="mi">${ok?'✓':''}</span><b>${M.n}</b><small>${esc(M.v(d,k))}</small></button>`).join('')}</div>
+    ${ms.length>4?`<button class="ds-more" data-act="mustsAll">${all?'Show less':`See all ${ms.length}`}</button>`:''}</section>`; }
+
+/* 3. Train: same workout card as Today, at the top; no duplicate banner */
+vTrain = (orig => function(){ let h=orig(); const wd=new Date().getDay();
+  h=h.replace(/<div class="hero" style="padding:16px">[\s\S]*?<\/div><\/div>/, '');           // old "Today's plan" banner
+  h=h.replace(workoutCard(wd, true), '');
+  return todayWorkout(wd) + h; })(vTrain);
+
+/* 4 + 11. Food tab: Add button and search stay at the top, Recent first, weekly numbers folded */
+function recentDishes(n=6){ const ids=[]; for(const k of Object.keys(S.days).sort().reverse().slice(0,14)) for(const e of [...(S.days[k].food||[])].reverse()) if(e.dish && !ids.includes(e.dish) && dishById(e.dish)) ids.push(e.dish); return ids.slice(0,n).map(dishById); }
+vFood = function(){
+  const cats=['All','★ Saved','High protein','Mine',...FOOD_CATS];
+  const list=filterDishes(foodQ, foodCat); const rec=recentDishes(); const showRec=!foodQ && foodCat==='All' && rec.length;
+  const b=bank(todayKey());
+  return `
+  <div class="food-top">
+    <button class="btn pri full" data-act="quickAdd">${ico('food',18)}Add food to ${esc(niceDate(cur).toLowerCase()==='today'?'today':niceDate(cur))}</button>
+    <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity=".5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="foodSearch" placeholder="Search dish or ingredient — moong, paneer, dal" value="${esc(foodQ)}" autocomplete="off"></div>
+    <div class="chips">${cats.map(c=>`<button class="chip ${c===foodCat?'on':''}" data-act="foodCat" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+  </div>
+  ${showRec?`<div id="foodRecent"><div class="ds-label">Recent</div><div class="list">${rec.map(dishCard).join('')}</div>${mealsChips()}</div>`:''}
+  <details class="card fold"><summary><span class="grow"><b>This week</b><small>${b&&b.left!=null?`${r0(Math.max(0,b.left)).toLocaleString('en-IN')} kcal left · `:''}treats, portion guide</small></span>${ico('down',18)}</summary>
+    <div class="fold-in">${bankCard(todayKey())}${treatCard(todayKey())}${portionGuideCard()}</div></details>
+  <div class="ds-label">${foodQ||foodCat!=='All'?'Results':'All dishes'} · ${list.length}</div>
+  <div class="small muted" style="margin:-4px 2px 10px"><span class="dot g"></span> everyday <span class="dot y"></span> sometimes <span class="dot r"></span> treat · per serving</div>
+  <div class="list" id="foodList">${list.map(dishCard).join('') || `<div class="card empty">No match. Try another word, or create it with “New dish”.</div>`}</div>
+  <div class="ds-actions"><button class="btn sec" data-act="newDish">New dish</button><button class="btn sec" data-act="newIng">New ingredient</button></div>`;
+};
+
+/* 2. Progress: exercise history as one row per exercise (no wide table) */
+exProgressCard = function(){ const ids=new Set(); for(const k in S.days) for(const x of (S.days[k].ex||[])) if(x.log) ids.add(x.ex);
+  const rows=[...ids].map(id=>{ const e=exById(id); if(!e) return null; const H=exHistory(id).filter(h=>h.x.log); if(!H.length) return null; const f=H[0], l=H[H.length-1]; const nt=progTarget(findPlanItem(id)||{id});
+    const fb=bestOf(f.x,e), lb=bestOf(l.x,e), timed=e.type==='time', ch=lb-fb; const kgOf=x=>x.log.some(y=>+y.kg)?' @ '+Math.max(...x.log.map(y=>+y.kg||0))+' kg':'';
+    const v=x=>timed?fmtDur(x):x+' reps';
+    return `<div class="exp-row" data-act="openEx" data-id="${esc(id)}"><div class="grow"><b>${esc(e.en)}</b><span class="exp-ft">${v(fb)}${kgOf(f.x)} → <b>${v(lb)}${kgOf(l.x)}</b></span><small>Next: ${esc(tgtText(nt,e))}</small></div>
+      <em class="exp-ch ${ch>0?'up':ch<0?'dn':''}">${ch>0?'▲ +'+(timed?fmtDur(ch):ch+' rep'+(ch>1?'s':'')):ch<0?'▼ lower':'same'}</em></div>`; }).filter(Boolean);
+  return `<div class="card"><h3>Exercise progress <span class="sub">best set · first → latest</span></h3>
+    ${rows.length?rows.join('')+'<div class="small muted" style="margin-top:8px">Tap an exercise for its full history.</div>'
+      :'<div class="small muted">Log your first workout with “Did it as planned” or “Change sets”. Each exercise then shows first → latest and the next target.</div>'}</div>`; };
+
+/* 7. Log my sets: big + / − buttons, minutes for long timers, Skipped / Pain under "More" */
+drawActuals = function(fromSession){ const X=AX;
+  openSheet(`<h2>What I actually did</h2><div class="hih">${esc(X.title||'')} · week ${progWeek()}${easyWeek()?' (easy week)':''}</div>
+    <div class="small muted" style="margin-bottom:12px">One row per set. Change the number if you did more or less, then tick it. ${fromSession?'Sets from the guided session are already ticked.':''}</div>
+    ${X.items.map((x,i)=>{ const e=exById(x.id), t=x.t, mins=t.timed&&t.secs>=120, unit=t.timed?(mins?'min':'sec'):(x.id==='kapalbhati'?'strokes':'reps'), stp=t.timed?(mins?60:5):1; const more=x.more||x.skip||x.pain;
+      return `<div class="card ax-ex ${x.skip?'skip':''}"><div class="ds-head" style="margin-bottom:8px"><div><b class="ax-n">${esc(e.en)}</b><div class="small muted">Target ${esc(tgtText(t,e))}${t.up?' <span class="up">▲ raised</span>':''}</div></div>
+        <button class="btn sec sm" data-act="axAll" data-i="${i}">${ico('check',16)}All</button></div>
+        ${x.sets.map((s,j)=>`<div class="ax-row"><span class="ax-l">Set ${j+1}</span><button class="ax-b" data-act="axStep" data-i="${i}" data-j="${j}" data-d="${-stp}" aria-label="less">−</button><input class="inp ax-in" inputmode="decimal" data-ax="${i}:${j}:v" value="${esc(mins?r1((+s.v||0)/60):s.v)}"><span class="ax-u">${unit}</span><button class="ax-b" data-act="axStep" data-i="${i}" data-j="${j}" data-d="${stp}" aria-label="more">+</button>${t.kind==='load'?`<input class="inp ax-kg" inputmode="decimal" placeholder="kg" data-ax="${i}:${j}:kg" value="${esc(s.kg)}">`:''}<button class="ax-b ax-ok ${s.ok?'on':''}" data-act="axOk" data-i="${i}" data-j="${j}" aria-label="done">${s.ok?'✓':''}</button></div>`).join('')}
+        <div class="ax-foot"><button class="ds-more" data-act="axAdd" data-i="${i}">+ Add a set</button><button class="ds-more" data-act="axMore" data-i="${i}">${more?'Less':'More'}</button></div>
+        ${more?`<div class="ax-more"><button class="btn sec sm ${x.skip?'on':''}" data-act="axSkip" data-i="${i}">${x.skip?'Undo skip':'Skipped it'}</button><button class="btn sec sm ax-pain ${x.pain?'on':''}" data-act="axPain" data-i="${i}">${x.pain?'Pain noted':'Felt pain'}</button></div>`:''}</div>`; }).join('')}
+    <button class="btn pri full" data-act="axSave">Save my sets</button>`, b=>{
+      $$('[data-ax]',b).forEach(el=>el.addEventListener('input',()=>{ const [i,j,f]=el.dataset.ax.split(':'); const x=AX.items[+i], s=x.sets[+j]; let v=el.value.trim();
+        if(f==='v' && x.t.timed && x.t.secs>=120) v=String(Math.round((parseFloat(v)||0)*60));
+        s[f]=v; if(f==='v') s.ok=true; const okb=el.closest('.ax-row').querySelector('.ax-ok'); okb.classList.add('on'); okb.textContent='✓'; })); }); };
+Object.assign(A, {
+  axMore:el=>{ const x=AX.items[+el.dataset.i]; x.more=!(x.more||x.skip||x.pain); drawActuals(); },
+  mustsAll:()=>{ S.ui ||= {}; S.ui.mustsAll=!S.ui.mustsAll; save(true); render(); },
+  meGrp:el=>{ S.ui ||= {}; const o=S.ui.meOpen ||= {}; o[el.dataset.g]=!o[el.dataset.g]; save(true); setTimeout(()=>{ el.parentElement.open=!!o[el.dataset.g]; },0); },
+});
+simpleToday = (orig => function(d){ return orig(d).replace(mustsCard(), mustsTop()); })(simpleToday);
+
+/* 5. Blood results: words next to the colour — never colour alone */
+const ST_WORD={g:'Within range', a:'Slightly outside range', r:'Outside range — review with your doctor', '':'No range'};
+
+/* 8. Chat: show exactly what was saved; estimates get Edit; Undo always one tap */
+
+/* 14. Me tab in clear groups */
+const ME_GROUPS=[['acct','Account & backup','Online copy, login, backup',/online|backup|log ?in|cloud|save my data/i],
+  ['goals','Health & goals','Starting point, daily targets, health file, bottles',/starting point|daily targets|health data|bottle|goal/i],
+  ['coach','Coach & reminders','Riya, AI, voice, steps, nudges, quiet hours',/coach|voice|ai\b|riya|nudge|steps from|reminder/i],
+  ['look','Appearance','Light or dark, avatar',/look|avatar|theme/i],
+  ['priv','Privacy & data','Where data lives, private space, erase',/where my data|private space|erase|delete/i],
+  ['more','More','My additions, about',/.*/]];
+function groupMe(view){ if(!view) return; const kids=[...view.children]; if(!kids.length || view.querySelector('.me-grp')) return; const bins={};
+  for(const el of kids){ const t=((el.querySelector('h3,summary,b')||{}).textContent||el.textContent||'').slice(0,60); const g=ME_GROUPS.find(G=>G[3].test(t)); (bins[g[0]] ||= []).push(el); }
+  const open=S.ui?.meOpen||{};
+  for(const [id,title,hint] of ME_GROUPS){ const els=bins[id]; if(!els) continue; const det=document.createElement('details'); det.className='me-grp'; if(open[id]) det.open=true;
+    det.innerHTML=`<summary data-act="meGrp" data-g="${id}"><span class="grow"><b>${title}</b><small>${hint}</small></span><span class="me-n">${els.length}</span>${ico('down',18)}</summary><div class="me-in"></div>`;
+    const box=det.querySelector('.me-in'); els.forEach(e=>box.appendChild(e)); if(id==='priv') els.sort((a,b)=>(a.tagName==='BUTTON')-(b.tagName==='BUTTON')).forEach(e=>box.appendChild(e)); view.appendChild(det); } }
+
+/* after every screen: Me grouping, single "+" button, Food search hides Recent */
+render = (orig => function(){ orig.apply(this, arguments);
+  if(tab==='me') groupMe($('#main .view'));
+  $('#fab').style.display = tab==='today' ? '' : 'none';
+  if(tab==='food'){ const s=$('#foodSearch'); if(s) s.addEventListener('input',()=>{ const r=$('#foodRecent'); if(r) r.style.display=s.value.trim()?'none':''; }); }
+})(render);
+
+(function(){ const st=document.createElement('style'); st.textContent=`
+/* readable text sizes — nothing important under 13 px */
+body{font-size:15.5px}
+.small,.item .t2,.must small,.lab-row small,.rr-row small,.st span,.kv3 small,.jhead small,.badge small,.coach-row small,.wbtn small,.por small{font-size:13px}
+.tabs button{font-size:11px}.pill{font-size:12px}.tl-slot{font-size:12.5px}.badge b{font-size:12.5px}.chart text{font-size:11px}.sl-b small{font-size:10.5px}
+.item .t1{font-size:15px}.hab .hl{font-size:12.5px}.hab .hv{font-size:20px}
+.ds-count{font-size:13px;color:var(--muted);font-weight:600;white-space:nowrap}
+/* food tab */
+.food-top{position:sticky;top:calc(58px + env(safe-area-inset-top));z-index:20;background:var(--bg);margin:0 -16px 4px;padding:6px 16px 2px;display:grid;gap:10px}
+html.demo .food-top{top:calc(74px + env(safe-area-inset-top))}
+.food-top .search{margin:0}.food-top .chips{padding-bottom:8px}
+.fold>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none}.fold>summary::-webkit-details-marker{display:none}
+.fold>summary small,.me-grp>summary small{display:block;color:var(--muted);font-size:13px;font-weight:500;margin-top:1px}
+.fold[open]>summary .ic,.me-grp[open]>summary .ic{transform:rotate(180deg)}
+.fold-in{margin-top:12px}.fold-in .card{border:0;padding:0;margin:0 0 16px;background:none;box-shadow:none}
+/* progress rows */
+.exp-row{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--border);cursor:pointer}
+.exp-row:first-of-type{border-top:0}.exp-row b{font-size:15px}.exp-row small{display:block;color:var(--muted);font-size:13px}
+.exp-row .grow{min-width:0}.exp-ft{display:block;font-size:14px;color:var(--muted);margin:2px 0}.exp-ft b{font-size:14px;color:var(--fg)}
+.exp-ch{flex:none;font-style:normal;font-weight:700;font-size:13px;color:var(--muted);background:var(--surface-2);border-radius:99px;padding:4px 10px}.exp-ch.up{color:var(--good)}.exp-ch.dn{color:var(--watch)}
+/* log sets */
+.ax-ex{padding:14px}.ax-n{font-size:15.5px}
+.ax-row{display:grid;grid-template-columns:44px 44px minmax(0,1fr) auto 44px auto 44px;align-items:center;gap:6px;margin-top:8px}
+.ax-row:has(.ax-kg){grid-template-columns:40px 44px minmax(0,1fr) auto 44px 64px 44px}
+.ax-l{font-size:13px;color:var(--muted);font-weight:600}.ax-u{font-size:13px;color:var(--muted)}
+.ax-b{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--fg);font-size:20px;font-weight:700;cursor:pointer;display:grid;place-items:center}
+.ax-b.ax-ok{color:var(--good);font-size:18px}.ax-b.ax-ok.on{background:var(--good);border-color:var(--good);color:#fff}
+.ax-in{height:44px;text-align:center;font-weight:700;font-size:16px;padding:0 4px;min-width:0}.ax-kg{height:44px;text-align:center;padding:0 4px}
+.ax-foot{display:flex;justify-content:space-between;margin-top:4px}
+.ax-more{display:flex;gap:8px;margin-top:8px}.ax-more .btn{flex:1}.ax-more .btn.on{background:var(--accent-weak);border-color:var(--accent);color:var(--fg)}
+.ax-more .ax-pain.on{background:color-mix(in srgb,var(--crit) 18%,var(--surface));border-color:var(--crit)}
+.ax-ex.skip{opacity:.6}
+/* blood results */
+.lab-row .dot{width:10px;height:10px;flex:none}.lab-st{font-weight:700}.lab-st.g{color:var(--good)}.lab-st.a{color:var(--watch)}.lab-st.r{color:var(--crit)}
+/* Me groups */
+.me-grp{background:var(--surface);border:1px solid var(--border);border-radius:16px;margin:0 0 12px;box-shadow:var(--shadow)}
+.me-grp>summary{display:flex;align-items:center;gap:10px;padding:16px;cursor:pointer;list-style:none}.me-grp>summary::-webkit-details-marker{display:none}
+.me-grp>summary b{font-size:16px}.me-n{font-size:12px;font-weight:700;color:var(--muted);background:var(--surface-2);border-radius:99px;padding:2px 8px}
+.me-in{padding:0 12px 4px}.me-in>.card{background:var(--surface-2);box-shadow:none}.me-in>.btn{margin-bottom:12px}
+.chat-est{font-size:12px;font-weight:700;color:var(--watch)}
+`; document.head.appendChild(st); })();
+
+/* 10. emoji out of chips, care ticks and filters too */
+dsTidy = (orig => function(root){ orig(root); if(!root) return;
+  root.querySelectorAll('.chip, .tick, .seg button, .tl-slot .mini').forEach(el=>{ const n=[...el.childNodes].find(x=>x.nodeType===3 && x.textContent.trim()); if(!n) return;
+    const t=n.textContent.replace(LEAD_EMO,''); if(t.trim()) n.textContent=t; }); })(dsTidy);
 /* ---------------- start ---------------- */
 applyTheme(); render(); checkBadges(); loadPhotos(); levelUps(); maybeMorning(); setTimeout(()=>syncNow(),1200);
-if(!S.settings.onboarded) setTimeout(()=>{ if(typeof Cloud!=='undefined' && !Cloud.user) cloudLoginSheet('in'); else wizard(0); },400);
-window.__ojas = {progTarget, progAfter, progWeek, tgtText, actualsSheet, exHistory, chatSets, PDB, syncNow, syncPull, syncPush, cloudCount, changedDays, SY:()=>SY, SYNC, habLevel, habRate, HABITS, habWeek, setHab, reviewPending, treatsIn, treatPatterns, isTreat, inQuiet, NUDGES, vCreate, vUnlock, VAULT, morningInfo, drawMorningCanvas, levelUps, handleText, openChat, answerCheckin, nextCheckin, parseFoodPart, CHECKINS, PORTIONS, computePlan, bank, wgStatus, mustsDone, mustStreak, myWeekly, weekKeys, applySetupFile, wizard, readReport, weeklyReport, labStatus, sleepHours, SESSION:()=>SESSION, S:()=>S, dishMacros, allDishes, allEx, ING:()=>ING, version:VERSION, parseDose, exMedia, statsAll, journeyAt, stepStats, P:()=>P, plFinish, checkBadges};
+if(DEMO){ document.documentElement.classList.add("demo"); demoSetup(); }
+if(!S.settings.onboarded) setTimeout(()=>{ if(CLOUD_ON() && !Cloud.user) cloudLoginSheet('in'); else wizard(0); },400);
+window.__ojas = {lastMeal, addItems, buildAX, pickVoice, progTarget, progAfter, progWeek, tgtText, actualsSheet, exHistory, chatSets, PDB, syncNow, syncPull, syncPush, cloudCount, changedDays, SY:()=>SY, SYNC, habLevel, habRate, HABITS, habWeek, setHab, reviewPending, treatsIn, treatPatterns, isTreat, inQuiet, NUDGES, vCreate, vUnlock, VAULT, morningInfo, drawMorningCanvas, levelUps, handleText, openChat, answerCheckin, nextCheckin, parseFoodPart, CHECKINS, PORTIONS, computePlan, bank, wgStatus, mustsDone, mustStreak, myWeekly, weekKeys, applySetupFile, wizard, readReport, weeklyReport, labStatus, sleepHours, SESSION:()=>SESSION, S:()=>S, dishMacros, allDishes, allEx, ING:()=>ING, version:VERSION, parseDose, exMedia, statsAll, journeyAt, stepStats, P:()=>P, plFinish, checkBadges};
 })();

@@ -47,5 +47,7 @@ const Cloud = (() => {
   async function photoList() { const r = await call('/storage/v1/object/list/ojas-photos', { method: 'POST', body: JSON.stringify({ prefix: sess.uid, limit: 1000 }) }); return (await j(r)) || []; }
   async function photoUp(id, blob) { return j(await call(`/storage/v1/object/ojas-photos/${sess.uid}/${encodeURIComponent(id)}.jpg`, { method: 'POST', body: blob, raw: blob.type || 'image/jpeg', headers: { 'x-upsert': 'true' } })); }
   async function photoDown(name) { const r = await call(`/storage/v1/object/authenticated/ojas-photos/${sess.uid}/${encodeURIComponent(name)}`); if (!r.ok) throw new Error('photo ' + r.status); return r.blob(); }
-  return { URL: URL_, sendCode, verify, signUp, signIn, refresh, token, rest, count, logout, photoList, photoUp, photoDown, get user() { return sess ? { uid: sess.uid, email: sess.email } : null; } };
+  async function photoDel(names) { return j(await call('/storage/v1/object/ojas-photos', { method: 'DELETE', body: JSON.stringify({ prefixes: names.map(n => sess.uid + '/' + n) }) })); }
+  async function fn(name, body) { const r = await call('/functions/v1/' + name, { method: 'POST', body: JSON.stringify(body) }); return j(r); }
+  return { URL: URL_, sendCode, verify, signUp, signIn, refresh, token, rest, count, logout, photoList, photoUp, photoDown, photoDel, fn, get user() { return sess ? { uid: sess.uid, email: sess.email } : null; } };
 })();
